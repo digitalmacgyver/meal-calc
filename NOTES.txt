@@ -1,0 +1,20 @@
+1. Download / scrape data site.
+
+2. Design:
+
+* Algorithm inputs, outputs.
+
+Parameters:
+* Target calories
+* Target protien, carb, and fat calories
+* Degree for micronutrient filling.
+
+Micronutrient score:
+
+sum over all micro of ( MICRO_SCORE ) 
+
+Best food addition is the one from the desired category which does the
+best on micro score.
+
+Key problem - what ratio of stuff do we add?
+
