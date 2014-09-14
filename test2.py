@@ -59,7 +59,7 @@ print potential_meals[0][2].nutrient_constraints
 
 potential_meals = nc.meal_planner( potential_meals[0][2],
                                    [ chicken ],
-                                   [ pfill, cfill, ffill ] )
+                                   [ ] )
 
 for score, added_item, potential_meal in potential_meals:
     print "Adding %s to %s yeilded a score of: %f" % ( added_item.name, potential_meal.name, score )

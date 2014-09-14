@@ -12,8 +12,6 @@ amount.
 
 NEXT UP:
 
-1. Implement classes as above.
-2. Stub out FoodItems and Nutrients with toy data from other example, verify things are working.
 2. Implement Flask/SQLalchemy local schema for Ingredients
 3. Populate Ingredients from USDA website.
 
@@ -86,6 +84,9 @@ def meal_planner( meal, food_items, filler_items=[], fitness_function=sum_lesser
 
 
     for fi in food_items:
+        # DEBUG - THINGS GET ALL SCREWED UP IF ANYTHING IS IN THE LIST
+        # TWICE, FILTER IT OUT AND PRINT AN ERROR.
+        
         fitness_food_items = [ x[0] for x in meal.get_food_items() ] + [ fi ] + filler_items
 
         # Inequality constraints are to be non-negative.
@@ -97,7 +98,7 @@ def meal_planner( meal, food_items, filler_items=[], fitness_function=sum_lesser
                 def make_closure( amount, nutrient, fitness_food_items ):
                     def equality_function( amounts ):
                         result = amount - reduce( lambda tot, ffi_idx: tot + fitness_food_items[ffi_idx].get_nutrients()[nutrient]*amounts[ffi_idx], range( len( amounts ) ), 0 )
-                        print "NUTRIENT, GOAL, DIFFERENCE", nutrient, amount, result
+                        #print "NUTRIENT, GOAL, DIFFERENCE, FFI", nutrient, amount, result, fitness_food_items
                         return result
                     return equality_function
 
