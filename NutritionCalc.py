@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
-from functools import wraps
+import copy
 import scipy.optimize
+import uuid
 
 '''
 NOTE: Food items live in a database. There is also a recipes table,
@@ -44,27 +45,111 @@ def meal_planner( meal, fitness_function, food_items, filler_items=[] ):
     * The ingredient in question from food_items
     * All ingredients available in filler_items
     
-    Outputs: An array of ( new_meal, fitness_value ) tipples.
+    Outputs: An array of ( meal_score, added_food_item, new_meal )
+    tuples, lower scores are better.
 
-    For each food_item if it is possible to craft a new Meal
-    that has a better (e.g. lower) fitness function value by adding
-    that item and optional filler_items to the base Meal, a new (
-    meal, fitness_value ) tuple is added to the output.
+    For each food_item if it is possible to craft a new Meal that has
+    a better (e.g. lower) fitness function value by adding that item
+    and optional filler_items to the base Meal, a new ( meal_score,
+    added_food_item meal ) tuple is added to the output.
 
     '''
-    fitness_food_items = [ 'DEBUG - get all food items from meal, append our food item of interest, and all the filler items.' ]
+    result_meals = []
 
-    def meal_fitness_function( food_items_amounts ):
-        return fitness_function( meal, fitness_food_items, food_item_amounts )
+    '''The input to the lambda function is an array of amounts, where the
+    i'th item corresponds to the i'th fitness_food_item.
+    
+    We want to sum up the food_item.get_nutrition()[nutrition] for
+    the calculation.
 
+    So: given x, the numerical index of the fitness food item, how do
+    we infer the food_item of the it's position of
+    fitness_food_items...
+
+    '''
+
+    for fi in food_items:
+        fitness_food_items = [ x[0] for x in meal.get_food_items ] + [ fi ] + filler_items
+
+        constraints = []
+        for nutrient, constraint_type, amount in meal.nutrient_constraints:
+            if constraint_type == 'eq':
+                constraints.append( {
+                    'type' : 'eq',
+                    'fun' : lambda amounts: amount - reduce( lambda tot, ffi_idx: tot + fitness_food_items[ffi_idx].get_nutrition()[nutrient]*amounts[ffi_idx], range( len( amounts ) ), 0 ) } )
+            elif constraint_type == 'lt':
+                constraints.append( {
+                    'type' : 'ineq',
+                    'fun' : lambda amounts: amount - reduce( lambda tot, ffi_idx: tot + fitness_food_items[ffi_idx].get_nutrition()[nutrient]*amounts[ffi_idx], range( len( amounts ) ), 0 ) } )
+            elif constraint_type == 'gt':
+                constraints.append( {
+                    'type' : 'ineq',
+                    'fun' : lambda amounts: reduce( lambda tot, ffi_idx: tot + fitness_food_items[ffi_idx].get_nutrition()[nutrient]*amounts[ffi_idx], range( len( amounts ) ), 0 ) - amount } )
+
+        bounds = []
+
+        fitness_food_items_map = {}
+        for idx, ffi in enumerate( fitness_food_items ):
+            fitness_food_items_map[ffi.uuid] = idx
+
+        for ffi in fitness_food_items:
+            bounds.append( ( None, None ) )
+
+        for food_item_id, constraint_type, bounds in meal.food_item_constraints:
+            bounds_idx = None
+            if food_item_id in fitness_food_items_map:
+                bounds_idx = fitness_food_items_map[food_item_id]
+
+                bounds[bounds_idx] = bounds
+        
+        def meal_fitness_function( food_item_amounts ):
+            return fitness_function( meal, fitness_food_items, food_item_amounts )
+
+        result = scipy.optimize.minimize( meal_fitness_function, 
+                                          [0]*len( fitness_food_items ), # Initial guess all 0
+                                          method='SLSQP', 
+                                          bounds=bounds, 
+                                          constraints=constraints )
+        
+        if result['success']:
+            meal_score = result['fun']
+            meal_food_items = []
+            for ffi_idx, food_item_amount in enumerate( result['x'] ):
+                food_item = fitness_food_items[ffi_idx]
+                meal_food_items.append( ( food_item.uuid, food_item_amount ) )
+            new_meal = copy.deepcopy( meal )
+            new_meal.replace_food_items( meal_food_items )
+            result_meals.append( ( meal_score, fi, new_meal ) )
+
+    return sorted( result_meals, reverse=True )
+                
             
 def sum_lesser_squares( meal, food_items, food_item_amounts ):
-    '''A fitness function, returns:
+    '''A fitness function to be minimized, returns:
     
     sum over all food_items and nutrition goals such that:
        max( 0, ( 1 - % of goal met by food items and food item amounts )^2 )
     '''
-    pass
+    result = 0.0
+    for nutrient, goal in meal.nutrient_goals.items():
+        current = 0.0
+        if goal != 0:
+            for fi_idx, fi in enumerate( food_items ):
+                current += fi.get_nutrients()[nutrient] * food_item_amounts[fi_idx]
+
+            result += ( max( 0.0, ( goal - current ) ) / goal )**2
+
+    food_items_map = {}
+    for fi_idx, fi in enumerate( food_items ):
+        food_items_map[fi.uuid] = fi_idx
+
+    for food_item_id, goal in meal.foot_item_goals.items():
+        if goal != 0:
+            if food_item_id in food_items_map:
+                result += ( max( 0.0, ( goal - food_item_amounts[food_items_map[food_item_id]] ) ) / goal )**2
+
+    return result
+
             
 class Meal( object ):
     '''A collection of food items and their amounts, as well as a set of
@@ -88,6 +173,14 @@ class Meal( object ):
     * food_items - A dictionary of FoodItem.id's -> amount in grams
     * nutrient_constraints - A list of constraints on nutrients for this meal
     * food_item_constraints - A list of constraints on food items for this meal
+      + Note: food_item_constraints are ignored if that food item is
+        not present in the Meal or being considered for addition to
+        the Meal (e.g. a constraint of at least 100 grams of peanut
+        butter does not cause a constraint violation in a recipe
+        involving only tortillas, chicken, and lettuce - however once
+        peanut butter is considered as an addition then a constraint
+        violation could occur if the meal could not accommodate 100
+        grams of peanut butter.
     * nutrient_goals - A dictionary of nutrient-> amount goals for this meal
     * food_item_goals - A dictionary of food_item_id -> amount goals for this meal
 
@@ -111,15 +204,16 @@ class Meal( object ):
     and we insist calories have a limit of 800 and that 110 grams of
     french fries be in the meal, there will be no solution (baring
     negative calorie food items).
+
     '''
 
     def __init__( self,
                   name,
                   food_items = [],                     # List of ( food_item_id, amount in grams )
                   nutrient_equality_constraints = [],  # List of ( nutrient_name, amount ) 
-                  nutrient_limit_constraints = []      # List of ( nutrient_name, lower, upper )
+                  nutrient_limit_constraints = [],     # List of ( nutrient_name, lower, upper )
                   food_item_equality_constraints = [], # List of ( food_item_id, amount ) 
-                  food_item_limit_constraints = []     # List of ( food_item_id, lower, upper )
+                  food_item_limit_constraints = [],    # List of ( food_item_id, lower, upper )
                   nutrient_goals = [],                 # List of ( nutrient_name, goal amount )
                   food_item_goals = [] ):              # List of ( food_item_id, goal amount )
         '''
@@ -145,7 +239,7 @@ class Meal( object ):
             self.add_food_item_constraint( food_item_id, 'eq', amount )
 
         for food_item_id, lower_bound, upper_bound in food_item_limit_constraints:
-            self.add_food_item_constraint( food_item_id, limits, ( lower_bound, upper_bound ) )
+            self.add_food_item_constraint( food_item_id, 'limits', ( lower_bound, upper_bound ) )
 
         self.nutrient_goals = {}
         for nutrient, amount in nutrient_goals:
@@ -176,14 +270,9 @@ class Meal( object ):
     def add_food_item_constraint( self, food_item_id, constraint_type, amount ):
         if self.FIs.get_food_item( food_item_id ):
             if constraint_type == 'eq':
-                self.food_item_constraints.append( ( food_item_id, 'eq', amount ) )
+                self.food_item_constraints.append( ( food_item_id, ( amount, amount ) ) )
             elif constraint_type == 'limits':
-                lower_bound = amount[0]
-                upper_bound = amount[1]
-                if lower_bound is not None:
-                    self.food_item_constraints.append( food_item_id, 'gt', lower_bound )
-                if upper_bound is not None:
-                    self.food_item_constraints.append( food_item_id, 'lt', upper_bound )
+                self.food_item_constraints.append( food_item_id, amount )
 
     def add_nutrient_goal( self, nutrient, amount ):
         if nutrient not in self.NUTs:
@@ -195,10 +284,17 @@ class Meal( object ):
         if self.FIs.get_food_item( food_item_id ):
             self.food_item_goals[food_item_id] = amount
 
+    def replace_food_items( self, food_items ):
+        '''Replace the current self.food_items with the ( food_item_id, amount
+        ) tuples in food_items.'''
+        self.food_items = {}
+        for food_item_id, amount in food_items:
+            self.add_food_item( food_item_id, amount )
+    
 
     def get_food_items( self ):
         '''Return all our food items, in descending order of their amounts.'''
-        return sorted( [ ( a, b ) for a, b in self.food_items.items() ] key=lambda x: x[1], reverse=True)
+        return sorted( [ ( a, b ) for a, b in self.food_items.items() ], key=lambda x: x[1], reverse=True )
 
     def get_nutrients( self ):
         result = {}
@@ -207,7 +303,7 @@ class Meal( object ):
                 if nutrient in result:
                     result[nutrient] += amount * amount_per
                 else:
-                    result[nurtient] = amount * amount_per
+                    result[nutrient] = amount * amount_per
         return result
 
 class FoodItem( object ):
@@ -218,55 +314,90 @@ class FoodItem( object ):
     * name - The name - duplication permitted
     * serving_size - Optional - grams per serving
     * _nutrients - A dictionary of nutrient_name -> amount per gram of
-      FoodItem
+      FoodItem.  This member is private, get_nutrients must be used to
+      access it.
 
     Methods:
-    get_nutrients - Returns a dictionary of nutrient_name->amount per
+    * add_nutrient( nutrient, amount_per_gram ) - Add a nutrient to the
+    FoodItem with amount_per_gram of the nutrient per gram of
+    FoodItem.
+    * get_nutrients - Returns a dictionary of nutrient_name->amount per
     gram of FoodItem
+
     '''
 
-    def __init__( self, DEBUG ):
+    def __init__( self, name, nutrients={}, serving_size=None, uuid=None ):
+        '''Inputs:
+        * name - The name of this food item.
+        * nutrients - Optional, a dictionary of
+          nutrient->amount_per_gram_of_FoodItem, defaults to empty.
+        * serving_size - Optional, defaults to None.
+        * uuid - Optional, defaults to a new uuid.
         '''
-        '''
-        pass
 
-    def some_recipe_only_thing( self ):
-        '''Clients must override this method.'''
-        raise NotImplementedError()
+        self.NUTs = Nutrients().get_nutrient_types()
+
+        self.name = name
+        self._nutrients = nutrients
+        self.serving_size = serving_size
+
+        if uuid is not None:
+            self.uuid = uuid
+        else:
+            self.uuid = str( uuid.uuid4() )
+
+    def add_nutrient( self, nutrient, amount_per_gram ):
+        if nutrient in self.NUTs:
+            self._nutrients[nutrient] = amount_per_gram
+
+    def get_nutrients( self ):
+        return self._nutrients
 
 class Recipe( FoodItem ):
     '''A collection of FoodItems that make up a new FoodItem of type Recipe.
 
     Fields:
     * serving_size - Optional - grams per serving
-    * ingredients - An array of FoodItems (note - Recipe's can't be ingredients)
-    
+    * ingredients - An array of ( food_item_id, amount ) tuples (note -
+      Recipe's can't be included as an ingredient, only FoodItem base
+      class instances.
+ 
     Methods:
-    get_nutrients - Returns a dictionary of nutrient_name->amount per gram of recipe
+    * add_ingredient( food_item_id, amount )
+    * get_nutrients - Returns a dictionary of nutrient_name->amount per gram of recipe
     '''
 
-    def __init__( self, DEBUG ):
-        # DEBUG - strongly consider a **kwargs argument approach, and
-        # then any remaining args become nutrients? Or we iterate over
-        # the list of nutrients.
+    def __init__( self, name, ingredients=[], serving_size=None, uuid=None ):
+        '''Inputs:
+        * name - The name of this food item.
+        * ingredients - Optional, an array of FoodItem, amount tuples.
+        * serving_size - Optional, defaults to None.
+        * uuid - Optional, defaults to a new uuid.
         '''
-        '''
-        super( Recipe, self ).__init__( args )
-        pass
 
+        super( Recipe, self ).__init__( name, nutrients={}, serving_size=serving_size, uuid=uuid )
 
-# DEBUG - We'll have a method, class, or static objects that defined
-# what nutrient feilds we are interested in and their units?
-#
-# We support a get_nutrients method that takes in the raw food item
-# and returns a smaller dictionary of the desired fields that we care
-# about for Nutrients.
-# 
-# A row from the database can be turned into a dict with the
-# to_serializable_dict() method.
-#
-# Then its keys are the nutrient names (give or take - we don't care
-# about id, uuid, created_date, ...)
+        self.FIs = FoodItems()
+
+        for food_item_id, amount in ingredients:
+            self.add_ingredient( food_item_id, amount )
+
+    def add_nutrient( self ):
+        '''You can't add nutrients to a recipe, only ingredients.'''
+        raise NotImplementedError()
+
+    def add_ingredient( self, food_item_id, amount ):
+        fi = self.FIs.get_food_item( food_item_id )
+            
+        for nutrient, amount_per in fi.get_nutrients().items():
+            if nutrient in self._nutrients:
+                self._nutrients += amount * amount_per
+            else:
+                self._nutrients[nutrient] = amount * amount_per
+
+    def get_nutrients( self ):
+        return self._nutrients
+        
 
 class Nutrients( object ):
     '''Singleton-esque class for managing our Nutrients and their units.'''
@@ -274,12 +405,12 @@ class Nutrients( object ):
     # Class level variable that defines what our possible nutrients
     # are, and their units.
     nutrients = {
-        'energy' => 'kcal', # Not technically a nutrient, but convienient.
-        'fat' => 'grams',
-        'carbs' => 'grams',
-        'protein' => 'grams',
-        'vitamin C' => 'grams',
-        'calcium' => 'grams'
+        'kcal'      : 'kcal', # Not technically a nutrient, but convenient.
+        'fat'       : 'grams',
+        'carbs'     : 'grams',
+        'protein'   : 'grams',
+        'vitamin C' : 'grams',
+        'calcium'   : 'grams'
     }
 
     def __init__( self ):
@@ -302,12 +433,67 @@ class FoodItems( object ):
     def __init__( self, DEBUG ):
         if FoodItems.food_items is None:
             # Connect to database and load in all the food_items.
-            pass
-        pass
+
+            # DEBUG - for a toy implementation we try this.
+            asparagus = FoodItem( 'asparagus',
+                                  nutrients = {
+                                      'vitamin C' : 0.000077,
+                                      'calcium' : .00023,
+                                      'kcal' : 0.22, 
+                                      'protein' : 0.024,
+                                      'carbs' : 0.0411,
+                                      'fat' : 0.0198/9
+                                  } )
+            FoodItems.food_items[asparagus.uuid] = asparagus
+
+            chicken = FoodItem( 'chicken',
+                                nutrients = {
+                                    'vitamin C' : 0,
+                                    'calcium' : 0.00006,
+                                    'kcal' : 0.79,
+                                    'protein' : 0.6/4,
+                                    'carbs' : 0.0868/4,
+                                    'fat' : 0.0351/9
+                                } )
+            FoodItems.food_items[chicken.uuid] = chicken
+                                  
+            pfill = FoodItem( 'protein filler',
+                              nutrients = {
+                                  'vitamin C' : 0,
+                                  'calcium' : 0,
+                                  'kcal' : 4.0,
+                                  'protein' : 1.0,
+                                  'carbs' : 0.0,
+                                  'fat' : 0.0
+                              }
+            FoodItems.food_items[pfill.uuid] = pfill
+
+            cfill = FoodItem( 'carbs filler',
+                              nutrients = {
+                                  'vitamin C' : 0,
+                                  'calcium' : 0,
+                                  'kcal' : 4.0,
+                                  'protein' : 0.0,
+                                  'carbs' : 1.0,
+                                  'fat' : 0.0
+                              }
+            FoodItems.food_items[cfill.uuid] = cfill
+
+            ffill = FoodItem( 'fat filler',
+                              nutrients = {
+                                  'vitamin C' : 0,
+                                  'calcium' : 0,
+                                  'kcal' : 9.0,
+                                  'protein' : 0.0,
+                                  'carbs' : 0.0,
+                                  'fat' : 1.0
+                              }
+            FoodItems.food_items[ffill.uuid] = ffill
+
 
     def get_food_item( self, food_item_id, types = [] ):
         '''Given a FoodItem.id returns the corresponding FoodItem object. If
-        types is provided returon only items whose types match those
+        types is provided return only items whose types match those
         in the types array, e.g. FoodItem or Recipe.
         '''
 
@@ -327,7 +513,7 @@ class FoodItems( object ):
 
     def get_food_items( self, types = [] ):
         '''Returns an array of all food items.  If types is provided, the
-        result will be restircted to the provided types, e.g. Recipe
+        result will be restricted to the provided types, e.g. Recipe
         or FoodItem.
         '''
         all_types = False
