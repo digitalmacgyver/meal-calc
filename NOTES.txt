@@ -18,3 +18,154 @@ best on micro score.
 
 Key problem - what ratio of stuff do we add?
 
+First thing: Mock up the algorithm for food selection.
+
+Inductive Approach:
+
+We have a budget of protein, fat, and carbs.
+
+We have a set of prior selections, including the empty set.
+
+We order the new selections
+
+
+
+
+1. Select 1 or more vegetables, protiens, carbs, fruits, other
+
+2. 
+
+---
+
+Database:
+
+micronutrients:
+
+foods:
+
+food_micronutrients:
+
+??
+
+Or just a lot of columns in micronutrients.
+
+---
+
+
+====
+
+INSTALL NOTES:
+
+Extended from the guide at:
+http://www.marinamele.com/2013/12/how-to-set-django-app-on-heroku-part-i.html
+
+1. Greated a git repository:
+
+mkdir foo
+cd foo
+git init
+git add .
+git commit -m "initial commit"
+Create repository on github web UI, copy repo link.
+Edit .git/config to have the SSH version of the repo target.
+git push master origin (or something like that)
+
+2. Create a virtualenv:
+
+virtualenv --no-site-packages env
+source env/bin/activate
+
+3. Install postgres (one time per server)
+
+sudo apt-get install postgresql postgresql-contrib
+sudo -u postgres psql postgres
+\password postgres
+Password = robochef
+
+sudo apt-get install postgresql-server-dev
+
+More details at:
+https://help.ubuntu.com/community/PostgreSQL
+
+4. Install Python packages:
+
+sudo apt-get install python-psycopg2
+sudo apt-get install libpq-dev
+
+pip install django
+pip install django-toolbelt
+
+(ignore the error on yeild form self.wsgi.close() - that's a python 3
+only thing)
+
+5. 
+django-admin.py startproject my_project_name .
+
+The trailing . indicates to install stuff in the cwd, not in a
+my_project_name subdirectory.
+
+6. 
+
+echo "web: gunicorn my_project_name.wsgi --log-file -" > Procfile
+
+Verify it works with:
+foreman start
+And then visiting localhost:5000 in a browser.
+
+7. 
+pip freeze > requirements.txt
+
+8. Create seperate areas for apps (things in the MVC area), and libs
+(utilities shared amongst apps).
+
+cd my_project_name
+mkdir apps libs
+touch apps/__init__.py libs/__init__.py
+
+9. Create an app:
+
+cd apps
+django-admin.py starapp myapp
+
+Note: because of the apps directory, imports will look like:
+
+from my_project_name.apps.myapp.models import MyModel
+
+Add to settings.py INSTALLED_APPS:
+
+...
+'my_project_name.apps.myapp',
+...
+
+10. Edit my_project_name/settings.py
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# DEBUG - NEED TO DO THIS STILL.
+ALLOWED_HOSTS = ['yourappname.herokuapp.com']
+
+Add after DATABASES config:
+
+import dj_database_url
+DATABASES['default'] = dj_database_url.config()
+
+Add at end:
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+Add after STATUC_URL:
+STATIC_ROOT = 'staticfiles'
+STATICFILES_DIRS = (
+    os.path.join(BASE_DIR, 'static'),
+)
+
+11. Edit my_project_name/wsgi.py and:
+
+application = get_wsgi_application()
+
+and replace it with
+
+from dj_static import Cling
+application = Cling(get_wsgi_application())
+
+Test you can still log in.
+
