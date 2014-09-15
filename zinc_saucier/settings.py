@@ -12,7 +12,6 @@ https://docs.djangoproject.com/en/1.7/ref/settings/
 import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.7/howto/deployment/checklist/
 
@@ -26,7 +25,6 @@ TEMPLATE_DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
 # Application definition
 
 INSTALLED_APPS = (
@@ -36,7 +34,7 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'zinc_saucier.apps.menu_planner',
+    'zinc_saucier.meal_planner',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -57,14 +55,22 @@ WSGI_APPLICATION = 'zinc_saucier.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/1.7/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
-}
+#DATABASES = {
+#    'default': {
+        #'ENGINE': 'django.db.backends.sqlite3',
+        #'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+#        'ENGINE'   : 'django.db.backends.postgresql_psycopg2',
+#        'NAME'     : 'foodb',
+#        'USER'     : 'zinc_saucier',
+#        'PASSWORD' : 'zinc_saucier',
+#        'HOST'     : 'localhost',
+#        'PORT'     : '',
+#    }
+#}
 import dj_database_url
-DATABASES['default'] = dj_database_url.config()
+DATABASES = { 
+    'default' : dj_database_url.config( default='postgres://zinc_saucier:zinc_saucier@localhost:5432/foodb' ) 
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.7/topics/i18n/

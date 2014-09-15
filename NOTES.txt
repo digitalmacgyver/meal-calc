@@ -94,6 +94,7 @@ sudo apt-get install libpq-dev
 
 pip install django
 pip install django-toolbelt
+pip install south
 
 (ignore the error on yeild form self.wsgi.close() - that's a python 3
 only thing)
@@ -115,26 +116,14 @@ And then visiting localhost:5000 in a browser.
 7. 
 pip freeze > requirements.txt
 
-8. Create seperate areas for apps (things in the MVC area), and libs
-(utilities shared amongst apps).
-
-cd my_project_name
-mkdir apps libs
-touch apps/__init__.py libs/__init__.py
-
 9. Create an app:
 
-cd apps
-django-admin.py starapp myapp
-
-Note: because of the apps directory, imports will look like:
-
-from my_project_name.apps.myapp.models import MyModel
+django-admin.py startapp myapp
 
 Add to settings.py INSTALLED_APPS:
 
 ...
-'my_project_name.apps.myapp',
+'my_project_name.myapp',
 ...
 
 10. Edit my_project_name/settings.py
@@ -168,4 +157,78 @@ from dj_static import Cling
 application = Cling(get_wsgi_application())
 
 Test you can still log in.
+
+12. Create a database in Postgres:
+
+sudo su - postgres
+
+Create a database user:
+createuser -D -A -P myuser
+Provide a password.
+
+-D - no database creation rights
+-A - no user add rights
+-P - prompt for password
+
+Then:
+createdb -O myuser db_name
+
+I did:
+Database name: foodb
+User: zinc_saucier
+Password: zinc_saucier
+
+psql
+CREATE EXTENSION adminpack;
+
+13. Set up network logins:
+
+Edit /etc/postgresql/9.3/main/postgresql.conf and uncomment listen_addresses = 'localhost'
+
+14. Restart the server:
+
+sudo /etc/init.d/postgresql reload
+sudo /etc/init.d/postgresql restart
+
+15. Verify you can log in:
+
+psql -h localhost -U myuser -d dbname
+
+You will be prompted for the user's password.
+
+16. Update settings.py DATABASES to be:
+
+import dj_database_url
+DATABASES = { 
+    'default' : dj_database_url.config( default='postgres://zinc_saucier:zinc_saucier@localhost:5432/foodb' ) 
+}
+
+17.
+
+Sync the database:
+
+python manage.py syncdb
+
+Set Django admin user up.  I used:
+ironchef
+arcentat
+
+python manage.py migrate
+
+18.
+
+Start the development server:
+
+python manage.py runserver
+
+Change the port / IP:
+./manage.py runserver 1234
+./manage.py runserver 10.0.0.1:1234
+
+Development server automatically restarts when files change.
+
+
+
+
+
 
