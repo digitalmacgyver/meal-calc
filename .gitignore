@@ -56,3 +56,5 @@ target/
 # Emacs temp files
 \#*\#
 *~
+
+backup/

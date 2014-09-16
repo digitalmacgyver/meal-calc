@@ -94,71 +94,11 @@ sudo apt-get install libpq-dev
 
 pip install django
 pip install django-toolbelt
-pip install south
-
-(ignore the error on yeild form self.wsgi.close() - that's a python 3
-only thing)
 
 5. 
 django-admin.py startproject my_project_name .
 
-The trailing . indicates to install stuff in the cwd, not in a
-my_project_name subdirectory.
-
-6. 
-
-echo "web: gunicorn my_project_name.wsgi --log-file -" > Procfile
-
-Verify it works with:
-foreman start
-And then visiting localhost:5000 in a browser.
-
-7. 
-pip freeze > requirements.txt
-
-9. Create an app:
-
-django-admin.py startapp myapp
-
-Add to settings.py INSTALLED_APPS:
-
-...
-'my_project_name.myapp',
-...
-
-10. Edit my_project_name/settings.py
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# DEBUG - NEED TO DO THIS STILL.
-ALLOWED_HOSTS = ['yourappname.herokuapp.com']
-
-Add after DATABASES config:
-
-import dj_database_url
-DATABASES['default'] = dj_database_url.config()
-
-Add at end:
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
-Add after STATUC_URL:
-STATIC_ROOT = 'staticfiles'
-STATICFILES_DIRS = (
-    os.path.join(BASE_DIR, 'static'),
-)
-
-11. Edit my_project_name/wsgi.py and:
-
-application = get_wsgi_application()
-
-and replace it with
-
-from dj_static import Cling
-application = Cling(get_wsgi_application())
-
-Test you can still log in.
-
-12. Create a database in Postgres:
+6. Create a database in Postgres:
 
 sudo su - postgres
 
@@ -181,35 +121,88 @@ Password: zinc_saucier
 psql
 CREATE EXTENSION adminpack;
 
-13. Set up network logins:
+7. Set up network logins:
 
 Edit /etc/postgresql/9.3/main/postgresql.conf and uncomment listen_addresses = 'localhost'
 
-14. Restart the server:
+8. Restart the server:
 
 sudo /etc/init.d/postgresql reload
 sudo /etc/init.d/postgresql restart
 
-15. Verify you can log in:
+9. Verify you can log in:
 
 psql -h localhost -U myuser -d dbname
 
 You will be prompted for the user's password.
 
-16. Update settings.py DATABASES to be:
+10. Update settings.py DATABASES to be:
 
 import dj_database_url
 DATABASES = { 
     'default' : dj_database_url.config( default='postgres://zinc_saucier:zinc_saucier@localhost:5432/foodb' ) 
 }
 
+11. Set up Heroku stuff:
+
+* Add to end of settings.py
+SECURE_PROXY_SSL_HEADER = ( 'HTTP_X_FORWARDED_PROTO', 'https' )
+
+* Change the STATIC content part of settings.py to:
+
+STATIC_ROOT = 'staticfiles'
+STATIC_URL = '/static/'
+STATICFILES_DIRS = ( os.path.join( BASE_DIR, 'static' ) )
+
+* Change BASE_DIR to:
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+* Add to settings.py:
+# Allow all host headers
+ALLOWED_HOSTS = ['*']
+
+* Edit wsgi.py to have:
+
+from django.core.wsgi import get_wsgi_application
+from dj_static import Cling
+application = Cling( get_wsgi_application() )
+
+* Do this:
+echo "web: gunicorn my_project_name.wsgi --log-file -" > Procfile
+
+12. 
+pip freeze > requirements.txt
+
+13. Set up database stuff for inital apps:
+
+python manage.py migrate
+
+14. Make sure everything is working:
+
+python manage.py runserver
+Then visit localhost:8000 in a browser.
+Then CTRL-C the process, and do:
+
+foreman start
+And then visiting localhost:5000 in a browser.
+Then CTRL-C the process.
+
+15. Create an app:
+
+Run this command in the same directory as manage.py:
+python manage.py startapp myapp
+
+Add to settings.py INSTALLED_APPS:
+
+...
+'myapp',
+...
+
 17.
 
-Sync the database:
-
-python manage.py syncdb
-
-Set Django admin user up.  I used:
+Create an Admin user:
+python manage.py createsuperuser
+I did:
 ironchef
 arcentat
 
@@ -226,6 +219,22 @@ Change the port / IP:
 ./manage.py runserver 10.0.0.1:1234
 
 Development server automatically restarts when files change.
+
+19. Once you have made some changes to models, you can sync them to
+the database this way:
+
+./manage.py makemigrations myapp
+
+To see the SQL that will run:
+
+./manage.py sqlmigrate myapp 0001 (or whatever the migration number is).
+
+To list migrations:
+./manage.py migrate -l
+[X] indicates it has been applied already
+
+To execute migrations:
+./manage.py migate
 
 ==
 
@@ -262,7 +271,7 @@ column, but then the Django forms editor will store '' as the value,
 and then joins, selects on field == NULL will break.
 
 null=True (defaults to false)
-blanke=True (allow fields to be blank in the admin, defaults to false)
+blank=True (allow fields to be blank in the admin, defaults to false)
 
 Overwrite the model's save function to preserve nulls in the form
 admin:
