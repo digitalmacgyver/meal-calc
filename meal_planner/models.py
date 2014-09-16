@@ -4,7 +4,8 @@ from django.db import models
 class FoodItems( models.Model ):
     uid = models.CharField( "Food Item UUID",
                             max_length = 36,
-                            help_text = "Food Item UUID" )
+                            help_text = "Food Item UUID",
+                            unique = True )
 
     ndb_id = models.CharField( "Nutrient Database ID", 
                                max_length = 5, 
@@ -117,22 +118,22 @@ class FoodItems( models.Model ):
         return self.long_desc
 
     # There is probably a better way to do this, using _meta, but
-    # we'll pass on that for the time being.
+    # we"ll pass on that for the time being.
     #
     # Replace empty strings with null.
     def save(self, *args, **kwargs):
         for var in vars(self):
-            if not var.startswith('_'):
-                if self.__dict__[var] == '':
+            if not var.startswith("_"):
+                if self.__dict__[var] == "":
                     self.__dict__[var] = None
-        super(MyModel, self).save(*args, **kwargs)
+        super( FoodItems, self ).save( *args, **kwargs )
 
-    class Meta:
-        ordering = [ 'ndb_id' ]
+    class Meta( object ):
+        ordering = [ "ndb_id" ]
 
 
 class FoodItemServingSizes( models.Model ):
-    food_item_id = models.ForeignKey( 'FoodItems', 
+    food_item_id = models.ForeignKey( FoodItems, 
                                       verbose_name="FoodItem ID",
                                       help_text = "The database ID of the food item this serving size pertains to." )
 
@@ -169,22 +170,75 @@ class FoodItemServingSizes( models.Model ):
         return "%7.1f grams - %5.3f %s" % ( self.grams, self.quantity, self.unit )
 
     # There is probably a better way to do this, using _meta, but
-    # we'll pass on that for the time being.
+    # we"ll pass on that for the time being.
     #
     # Replace empty strings with null.
     def save(self, *args, **kwargs):
         for var in vars(self):
-            if not var.startswith('_'):
-                if self.__dict__[var] == '':
+            if not var.startswith("_"):
+                if self.__dict__[var] == "":
                     self.__dict__[var] = None
-        super(MyModel, self).save(*args, **kwargs)
+        super( FoodItemServingSizes, self ).save( *args, **kwargs )
 
-    class Meta:
-        pass
+
+class NutrientSources( models.Model ):
+    '''NOTE: We explicitly set and manage the PK of this class to be
+    nutrient_source_id to maintain the same values as are present in
+    the USDA NNDS SR 27.
+    '''
+    nutrient_source_id = models.PositiveIntegerField( "Nutrient Source ID", 
+                                                      primary_key = True,
+                                                      help_text = "The nutrient source ID from the USDA NNDS SR 27." )
+    
+    
+    source_desc = models.CharField( "Source Description",
+                                    max_length = 60,
+                                    help_text = "Nutrient source description from the USDA NNDS SR 27." )
+
+    def __unicode__( self ):
+        return self.source_desc
+
+    # There is probably a better way to do this, using _meta, but
+    # we"ll pass on that for the time being.
+    #
+    # Replace empty strings with null.
+    def save(self, *args, **kwargs):
+        for var in vars(self):
+            if not var.startswith("_"):
+                if self.__dict__[var] == "":
+                    self.__dict__[var] = None
+        super( NutrientSources, self ).save( *args, **kwargs )
+
+    class Meta( object ):
+        ordering = [ "id" ]
+
+
+class NutrientDerivations( models.Model ):
+    derivation_id = models.CharField( "Nutrient Derivation ID", 
+                                      max_length = 4,
+                                      help_text = "The data derivation ID from the USDA NNDS SR 27." )
+    
+    derivation_desc = models.CharField( "Source Description",
+                                    max_length = 120,
+                                    help_text = "How were the values in the nutrient determined." )
+
+    def __unicode__( self ):
+        return self.derivation_desc
+
+    # There is probably a better way to do this, using _meta, but
+    # we"ll pass on that for the time being.
+    #
+    # Replace empty strings with null.
+    def save(self, *args, **kwargs):
+        for var in vars(self):
+            if not var.startswith("_"):
+                if self.__dict__[var] == "":
+                    self.__dict__[var] = None
+        super( NutrientDerivations, self ).save( *args, **kwargs )
 
 
 class FoodItemNutrients( models.Model ):
-    food_item_id = models.ForeignKey( 'FoodItems',
+    food_item_id = models.ForeignKey( FoodItems,
                                       verbose_name = "FoodItem ID",
                                       help_text = "The database ID of the food item this nutrient is associated with." )
 
@@ -214,8 +268,8 @@ class FoodItemNutrients( models.Model ):
     # End denormalization
     
     amount = models.DecimalField( "Amount of Nutrient in 1 g of Food Item",
-                                  max_digits = 15,
-                                  decimal_places = 8,
+                                  max_digits = 18,
+                                  decimal_places = 11,
                                   help_text = "Amount of nutrient in 1 edible gram of a food item." )
 
     data_points = models.PositiveIntegerField( "Number of Data Points",
@@ -229,22 +283,22 @@ class FoodItemNutrients( models.Model ):
                                    blank = True,
                                    default = None )
 
-    nutrient_source_id = models.ForeignKey( 'NutrientSources',
+    nutrient_source_id = models.ForeignKey( NutrientSources,
                                             verbose_name = "Nutrient Source ID",
                                             help_text = "The database ID of the nutrient source for this FoodItem Nutrient." )
 
-    nutrient_derivation_id = models.ForeignKey( 'NutrientDerivations',
+    nutrient_derivation_id = models.ForeignKey( NutrientDerivations,
                                                 verbose_name = "Nutrient Derivation ID",
                                                 help_text = "The database ID of how this nutrient data was derived.",
                                                 null = True,
                                                 blank = True,
                                                 default = None )
 
-    is_fortified = models.BooleanField( 'Is Fortified',
+    is_fortified = models.BooleanField( "Is Fortified",
                                         default = False,
                                         help_text = "Indicates that this nutrient was added for fortification or enrichment." )
 
-    studies = models.PositiveIntegerField( 'Number of Studies',
+    studies = models.PositiveIntegerField( "Number of Studies",
                                            help_text = "Number of studies.",
                                            null = True,
                                            blank = True,
@@ -304,49 +358,136 @@ class FoodItemNutrients( models.Model ):
         return "FoodItem: %d has %f %s of %s per gram" % ( self.food_item_id, self.amount, self.unit, self.nutrient )
 
     # There is probably a better way to do this, using _meta, but
-    # we'll pass on that for the time being.
+    # we"ll pass on that for the time being.
     #
     # Replace empty strings with null.
     def save(self, *args, **kwargs):
         for var in vars(self):
-            if not var.startswith('_'):
-                if self.__dict__[var] == '':
+            if not var.startswith("_"):
+                if self.__dict__[var] == "":
                     self.__dict__[var] = None
-        super(MyModel, self).save(*args, **kwargs)
+        super( FoodItemNutrients, self ).save( *args, **kwargs )
 
-    class Meta:
-        ordering = [ 'sort_order' ]
+    class Meta( object ):
+        ordering = [ "sort_order" ]
+        unique_together = ( ( 'food_item_id', 'nutrient_id' ) )
 
 
-class NutrientSources( models.Model ):
-    '''NOTE: We explicitly set and manage the PK of this class to be
-    nutrient_source_id to maintain the same values as are present in
-    the USDA NNDS SR 27.
-    '''
-    nutrient_source_id = Fields.PositiveIntegerField( "Nutrient Source ID", 
-                                                      primary_key = True,
-                                                      help_text = "The nutrient source ID from the USDA NNDS SR 27." )
+class Footnotes( models.Model ):
+    food_item_id = models.ForeignKey( FoodItems, 
+                                      verbose_name = "FoodItem ID",
+                                      help_text = "The database ID of the food item this footnote pertains to." )
+
+    food_item_nutrient_id = models.ForeignKey( FoodItemNutrients, 
+                                               verbose_name = "FoodItemNutrient ID",
+                                               help_text = "The database ID of the food item nutrient this footnote pertains to.",
+                                               null = True,
+                                               blank = True,
+                                               default = None )
     
-    
-    source_desc = models.CharField( "Source Description",
-                                    max_length = 60,
-                                    help_text = "Nutrient source description from the USDA NNDS SR 27." )
+    footnote_number = models.PositiveIntegerFeild( "Footnote Number",
+                                                   help_text = "The number associated with this footnote." )
+
+    footnote_type_choices = (
+        ( "D", "Description" ),
+        ( "M", "Measure" ),
+        ( "N", "Nutrient" )
+        )
+
+    footnote_type = models.CharField( "Footnote Type",
+                                      max_length = 1,
+                                      help_text = "Footnote type: D - food description, M - measure description, N - nutrient value.",
+                                      choices = footnote_type_choices )
+
+    footnote = models.CharField( "Footnote",
+                                 max_length = 200,
+                                 help_text = "Footnote." )
 
     def __unicode__( self ):
-        return self.source_desc
+        return self.footnote
 
-    class Meta:
-        ordering = [ 'id' ]
+    # There is probably a better way to do this, using _meta, but
+    # we"ll pass on that for the time being.
+    #
+    # Replace empty strings with null.
+    def save(self, *args, **kwargs):
+        for var in vars(self):
+            if not var.startswith("_"):
+                if self.__dict__[var] == "":
+                    self.__dict__[var] = None
+        super( Footnotes, self ).save( *args, **kwargs )
 
-class NutrientDerivations( models.Model ):
-    derivation_id = Fields.CharField( "Nutrient Derivation ID", 
-                                      max_length = 4,
-                                      help_text = "The data derivation ID from the USDA NNDS SR 27." )
-    
-    derivation_desc = models.CharField( "Source Description",
-                                    max_length = 120,
-                                    help_text = "How were the values in the nutrient determined." )
+    class Meta( object ):
+        ordering = [ "footnote_number" ]
+
+class NutrientCitations( models.Model ):
+    food_item_nutrient_id = models.ForeignKey( FoodItemNutrients, 
+                                               verbose_name = "FoodItemNutrient ID",
+                                               help_text = "The database ID of the food item nutrient this footnote pertains to." )
+
+    authors = models.CharField( "Authors",
+                                max_length = 255,
+                                help_text = "Authors.",
+                                null = True,
+                                blank = True,
+                                default = None )
+
+    title = models.CharField( "Title",
+                              max_length = 255,
+                              help_text = "Title." )
+
+    year = models.CharField( "Year",
+                             max_length = 4,
+                             help_text = "Year.",
+                             null = True,
+                             blank = True,
+                             default = None )
+
+    journal = models.CharField( "Journal",
+                                max_length = 135,
+                                help_text = "Journal.",
+                                null = True,
+                                blank = True,
+                                default = None )
+
+    volume = models.CharField( "Volume or City",
+                               max_length = 16,
+                               help_text = "Volume number of journals, city for events.",
+                               null = True,
+                               blank = True,
+                               default = None )
+
+    issue = models.CharField( "Issue or State",
+                              max_length = 5,
+                              help_text = "Issue number for journals, State for events.",
+                              null = True,
+                              blank = True,
+                              default = None )
+
+    start_page = models.PositiveIntegerField( "Start Page",
+                                              help_text = "Start page of article.",
+                                              null = True,
+                                              blank = True,
+                                              default = None )
+
+    end_page = models.PositiveIntegerField( "End Page",
+                                              help_text = "End page of article.",
+                                              null = True,
+                                              blank = True,
+                                              default = None )
 
     def __unicode__( self ):
-        return self.derivation_desc
+        return "Authors: %s, '%s', %s, %s" % ( self.authors, self.title, self.journal, self.year )
+
+    # There is probably a better way to do this, using _meta, but
+    # we"ll pass on that for the time being.
+    #
+    # Replace empty strings with null.
+    def save(self, *args, **kwargs):
+        for var in vars(self):
+            if not var.startswith("_"):
+                if self.__dict__[var] == "":
+                    self.__dict__[var] = None
+        super( NutrientCitations, self ).save( *args, **kwargs )
+
 

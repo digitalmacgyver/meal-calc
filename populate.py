@@ -86,6 +86,32 @@ nutrient_definition_fields = [
     'sort_order'
 ]
 
+footnote_fields = [
+    'ndb_id', # FK to nutrients
+    'footnote_number',
+    'footnote_type',
+    'nutrient_id' # FK to nutrients,
+    'footnote'
+]
+
+citation_link_fields = [
+    'ndb_id', # Part of composite FK to food_item_nutrients
+    'nutrient_id', # Other part of composite key
+    'citation_id' # Not used, but FK to citations.
+]
+
+citation_fields = [
+    'citation_id',
+    'authors',
+    'title',
+    'year',
+    'journal',
+    'volume',
+    'issue',
+    'start_page',
+    'end_page'
+]
+
 FoodItems = [
     'uid'
 ]

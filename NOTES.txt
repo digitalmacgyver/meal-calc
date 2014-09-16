@@ -1,53 +1,12 @@
-1. Download / scrape data site.
+TODO:
 
-2. Design:
-
-* Algorithm inputs, outputs.
-
-Parameters:
-* Target calories
-* Target protien, carb, and fat calories
-* Degree for micronutrient filling.
-
-Micronutrient score:
-
-sum over all micro of ( MICRO_SCORE ) 
-
-Best food addition is the one from the desired category which does the
-best on micro score.
-
-Key problem - what ratio of stuff do we add?
-
-First thing: Mock up the algorithm for food selection.
-
-Inductive Approach:
-
-We have a budget of protein, fat, and carbs.
-
-We have a set of prior selections, including the empty set.
-
-We order the new selections
-
-
-
-
-1. Select 1 or more vegetables, protiens, carbs, fruits, other
-
-2. 
-
----
-
-Database:
-
-micronutrients:
-
-foods:
-
-food_micronutrients:
-
-??
-
-Or just a lot of columns in micronutrients.
+3. Verify the syntax of models.py.
+4. Verify each column in the data files is represented in populate.py.
+5. Start writing populate.py
+6. Migrate the schema.
+6. populate database with a handful of rows first (3 food items).
+7. Test that everything looks good from ORM, from database.
+8. Populate everything.
 
 ---
 
