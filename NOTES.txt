@@ -227,8 +227,125 @@ Change the port / IP:
 
 Development server automatically restarts when files change.
 
+==
+
+Helpful URLs:
 
 
+Django model reference:
+
+https://docs.djangoproject.com/en/1.4/ref/models/fields/#django.db.models.ForeignKey
 
 
+https://docs.djangoproject.com/en/1.4/ref/models/fields/#model-field-types
+
+https://docs.djangoproject.com/en/1.4/topics/db/models/
+
+Django setup guide:
+
+
+http://realdjango.herokuapp.com/
+http://www.jeffknupp.com/blog/2013/12/18/starting-a-django-16-project-the-right-way/
+
+http://www.marinamele.com/2013/12/how-to-set-django-app-on-heroku-part-i.html
+
+Postgres:
+https://help.ubuntu.com/community/PostgreSQL
+
+Field options:
+
+OK - Django convention for forms is that empty TEXT type fields are
+always represented as '', so they won't be null in the database.  We
+should think about how adhering to this convention will go in our
+database, as we'll end up potentially creating objects with NULL in a
+column, but then the Django forms editor will store '' as the value,
+and then joins, selects on field == NULL will break.
+
+null=True (defaults to false)
+blanke=True (allow fields to be blank in the admin, defaults to false)
+
+Overwrite the model's save function to preserve nulls in the form
+admin:
+
+def save(self, *args, **kwargs):
+    for var in vars(self):
+        if not var.startswith('_'):
+            if self.__dict__[var] == '':
+                self.__dict__[var] = None
+    super(MyModel, self).save(*args, **kwargs)
+
+--
+
+CHOICES - you can populate from a database list:
+   CHOICES = list ( (obj.code,obj.name) for obj in Scac.objects.all() )
+Formmat is:
+( database_field_value, form_display_anme )
+
+You provide like this:
+shirt_size = models.CharFIeld( max_length=1, choices=SHIRT_SIZE_CHOICES )
+
+--
+
+default, the default value for the object, can be value or callable
+
+--
+
+help_text - Extra text to be displayed in the form widget
+
+--
+
+primary_key - if set overrides the default integer PKs - I won't be using this.
+
+--
+
+unique - if true this is a UK
+
+--
+
+Each standard field name takes an optional first positional argument,
+which is a verbose name.
+
+Fields which are ForeignKey, ManyToMany, or OneToOne take a model
+class as their first agument, so verbose names can be set with the
+verbose_name="whee" parameter.
+
+ForeignKey.to_field - the field the relation is to - defaults to the PK.
+
+--
+ 
+CLASS META OPTIONS:
+
+Create an internal class called meta like:
+
+class Foo( models.Model ):
+      ...
+      class Meta:
+      	    ordering = ["created_date"]
+
+
+Multiple key uniqueness:
+
+unique_together = ( (cola,colb,colc ), (cola,cold) )
+
+Multi column indices:
+index_together = [
+	       [ cola, colb ]
+]
+
+--
+
+IN PYTHON 2, WE'LL GENERALLY WANT TO DEFINE THE __unicode__() method
+on each class, to produce something readable when the object is
+cohersed into a string.
+
+CharField( max_lenght=3, ... )
+
+DecimalField( max_digits=3, decimap_places=2, ... )
+E.g. this would accomodate 1.23 but not 400 or 1.234.
+
+IntegerField
+
+NullBooleanField (boolean but NULL is permitted)
+
+PositiveIntegerField
 

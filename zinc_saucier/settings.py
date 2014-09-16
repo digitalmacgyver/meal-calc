@@ -34,7 +34,7 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'zinc_saucier.meal_planner',
+    'meal_planner',
 )
 
 MIDDLEWARE_CLASSES = (
