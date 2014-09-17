@@ -276,6 +276,8 @@ for df in sorted( files, key=lambda x: x['import_order'] ):
         
     f = open( filename, mode='r' )
     
+    count = 1
+
     for line in f:
         line = unicode( line.decode( 'latin1' ) )
 
@@ -284,6 +286,11 @@ for df in sorted( files, key=lambda x: x['import_order'] ):
             continue
 
         line = line.rstrip( "\n" )
+
+        count += 1
+        if count % 1000 == 0:
+            print "Working on:", line
+
         column_data = line.split( '^' )
         if ( len( column_data ) != len( columns ) ):
             raise Exception( "Malformed line found, had %d columns, expected %d, line was: '%s'" %  ( len( column_data ), len( columns ), line ) )
@@ -454,7 +461,15 @@ for df in sorted( files, key=lambda x: x['import_order'] ):
             fin = None
 
             if nutrient_id is not None:
-                fin = database['FoodItemNutrients'][ndb_id][nutrient_id]
+                if nutrient_id not in database['FoodItemNutrients'][ndb_id]:
+                    # A few oddball foodnotes pertain to a nutrient on
+                    # a food item where that nutrient is not
+                    # explicitly listed for the food item.
+                    #
+                    # In that case just put the note on the food item.
+                    fi = database['FoodItems'][ndb_id]
+                else:
+                    fin = database['FoodItemNutrients'][ndb_id][nutrient_id]
             else:
                 fi = database['FoodItems'][ndb_id]
                 
@@ -470,6 +485,7 @@ for df in sorted( files, key=lambda x: x['import_order'] ):
             citation_id = column_fields[2]
 
             fin = database['FoodItemNutrients'][ndb_id][nutrient_id]
+            #fin = FoodItemNutrients.objects.get( pk = database['FoodItemNutrients'][ndb_id][nutrient_id] )
             cf = data['NutrientCitations'][citation_id]
 
             nc = NutrientCitations.objects.create( food_item_nutrient_id = fin,
