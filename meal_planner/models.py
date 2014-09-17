@@ -116,6 +116,8 @@ class FoodItems( models.Model ):
 
     class Meta( object ):
         ordering = [ "ndb_id" ]
+        verbose_name = 'Food Item'
+        verbose_name_plural = 'Food Items'
 
 
 class FoodItemLanguaLDesc( models.Model ):
@@ -144,6 +146,10 @@ class FoodItemLanguaLDesc( models.Model ):
                 if self.__dict__[var] == "":
                     self.__dict__[var] = None
         super( FoodItemLanguaLDesc, self ).save( *args, **kwargs )
+
+    class Meta( object ):
+        verbose_name = 'Food Item LanguaL Description'
+        verbose_name_plural = 'Food Item LanguaL Descriptions'
 
 
 class FoodItemServingSizes( models.Model ):
@@ -194,6 +200,10 @@ class FoodItemServingSizes( models.Model ):
                     self.__dict__[var] = None
         super( FoodItemServingSizes, self ).save( *args, **kwargs )
 
+    class Meta( object ):
+        verbose_name = 'Food Item Serving Size'
+        verbose_name_plural = 'Food Item Serving Sizes'
+
 
 class NutrientSources( models.Model ):
     '''NOTE: We explicitly set and manage the PK of this class to be
@@ -225,6 +235,8 @@ class NutrientSources( models.Model ):
 
     class Meta( object ):
         ordering = [ "nutrient_source_id" ]
+        verbose_name = 'Nutrient Source'
+        verbose_name_plural = 'Nutrient Sources'
 
 
 class NutrientDerivations( models.Model ):
@@ -250,6 +262,9 @@ class NutrientDerivations( models.Model ):
                     self.__dict__[var] = None
         super( NutrientDerivations, self ).save( *args, **kwargs )
 
+    class Meta( object ):
+        verbose_name = 'Nutrient Derivation'
+        verbose_name_plural = 'Nutrient Derivations'
 
 class FoodItemNutrients( models.Model ):
     food_item_id = models.ForeignKey( FoodItems,
@@ -393,7 +408,8 @@ class FoodItemNutrients( models.Model ):
     class Meta( object ):
         ordering = [ "sort_order" ]
         unique_together = ( ( 'food_item_id', 'nutrient_id' ) )
-
+        verbose_name = 'Food Item Nutrient'
+        verbose_name_plural = 'Food Item Nutrients'
 
 class Footnotes( models.Model ):
     food_item_id = models.ForeignKey( FoodItems, 
@@ -444,6 +460,9 @@ class Footnotes( models.Model ):
 
     class Meta( object ):
         ordering = [ "footnote_number" ]
+        verbose_name = 'Footnote'
+        verbose_name_plural = 'Footnotes'
+
 
 class NutrientCitations( models.Model ):
     food_item_nutrient_id = models.ForeignKey( FoodItemNutrients, 
@@ -515,4 +534,7 @@ class NutrientCitations( models.Model ):
                     self.__dict__[var] = None
         super( NutrientCitations, self ).save( *args, **kwargs )
 
+    class Meta( object ):
+        verbose_name = 'Nutrient Citation'
+        verbose_name_plural = 'Nutrient Citations'
 

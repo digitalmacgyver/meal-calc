@@ -128,7 +128,8 @@ SECURE_PROXY_SSL_HEADER = ( 'HTTP_X_FORWARDED_PROTO', 'https' )
 
 STATIC_ROOT = 'staticfiles'
 STATIC_URL = '/static/'
-STATICFILES_DIRS = ( os.path.join( BASE_DIR, 'static' ) )
+# Note the trailing comma to confirm that forces this to be a tuple.
+STATICFILES_DIRS = ( os.path.join( BASE_DIR, 'static' ), )
 
 * Change BASE_DIR to:
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
