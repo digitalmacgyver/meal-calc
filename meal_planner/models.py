@@ -100,20 +100,6 @@ class FoodItems( models.Model ):
                                        blank = True,
                                        default = None )
 
-    langual_id = models.CharField( "LanguaL Food Thesaurus ID",
-                          max_length = 5,
-                          help_text = "The LanguaL food description thesaurus ID.",
-                          null = True,
-                          blank = True,
-                          default = None )
-
-    langual_desc = models.CharField( "LanguaL Description",
-                          max_length = 140,
-                          help_text = "The description of this food item from the LanguaL food description thesaurus.",
-                          null = True,
-                          blank = True,
-                          default = None )
-
     def __unicode__( self ):
         return self.long_desc
 
@@ -130,6 +116,34 @@ class FoodItems( models.Model ):
 
     class Meta( object ):
         ordering = [ "ndb_id" ]
+
+
+class FoodItemLanguaLDesc( models.Model ):
+    food_item_id = models.ForeignKey( FoodItems, 
+                                      verbose_name="FoodItem ID",
+                                      help_text = "The database ID of the food item this LanguaL description pertains to." )
+
+    langual_id = models.CharField( "LanguaL Food Thesaurus ID",
+                          max_length = 5,
+                          help_text = "The LanguaL food description thesaurus ID." )
+
+    langual_desc = models.CharField( "LanguaL Description",
+                          max_length = 140,
+                          help_text = "The description of this food item from the LanguaL food description thesaurus." )
+
+    def __unicode__( self ):
+        return self.langual_desc
+
+    # There is probably a better way to do this, using _meta, but
+    # we"ll pass on that for the time being.
+    #
+    # Replace empty strings with null.
+    def save(self, *args, **kwargs):
+        for var in vars(self):
+            if not var.startswith("_"):
+                if self.__dict__[var] == "":
+                    self.__dict__[var] = None
+        super( FoodItemLanguaLDesc, self ).save( *args, **kwargs )
 
 
 class FoodItemServingSizes( models.Model ):
@@ -247,9 +261,18 @@ class FoodItemNutrients( models.Model ):
                           help_text = "Unique 3-digit identifier for a nutrient." )
 
     # These columns denormalized
+    unit_choices = ( 
+        ( 'g', 'Grams' ),
+        ( 'mg', 'Milligrams' ),
+        ( 'ug', 'Micrograms' ),
+        ( 'IU', 'International unit' ),
+        ( 'kcal', 'Kilocalorie' )
+    )
+
     unit = models.CharField( "Unit",
-                          max_length = 7,
-                          help_text = "Nutrient unit (e.g. kcal, IU, g)." )
+                             max_length = 7,
+                             help_text = "Nutrient unit (e.g. kcal, IU, g).",
+                             choices = unit_choices )
 
 
     infoods_tag = models.CharField( "INFOODS Tagname",
@@ -351,8 +374,7 @@ class FoodItemNutrients( models.Model ):
     updated_date = models.DateField( "Updated Date",
                           help_text = "When this value was added or last modified.",
                           null = True,
-                          blank = True,
-                          default = datetime.datetime.utcnow() )
+                          blank = True )
 
     def __unicode__( self ):
         return "FoodItem: %d has %f %s of %s per gram" % ( self.food_item_id, self.amount, self.unit, self.nutrient )
@@ -376,7 +398,10 @@ class FoodItemNutrients( models.Model ):
 class Footnotes( models.Model ):
     food_item_id = models.ForeignKey( FoodItems, 
                                       verbose_name = "FoodItem ID",
-                                      help_text = "The database ID of the food item this footnote pertains to." )
+                                      help_text = "The database ID of the food item this footnote pertains to.",
+                                      null = True,
+                                      blank = True,
+                                      default = None )
 
     food_item_nutrient_id = models.ForeignKey( FoodItemNutrients, 
                                                verbose_name = "FoodItemNutrient ID",

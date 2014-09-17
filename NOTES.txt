@@ -1,12 +1,29 @@
 TODO:
 
-3. Verify the syntax of models.py.
-4. Verify each column in the data files is represented in populate.py.
-5. Start writing populate.py
+
+1. Create small sample data set.
+2. Open files, parse them.
+   * Transform booleans
+   * Transform units
+   * Link up PKs / Related items.
+   * Code out stuff to ORM it in.
+
 6. Migrate the schema.
 6. populate database with a handful of rows first (3 food items).
 7. Test that everything looks good from ORM, from database.
 8. Populate everything.
+
+---
+
+python manage.py shell
+
+or 
+import django
+django.setup()
+
+
+psql -h localhost -U zinc_saucier -d foodb
+
 
 ---
 
