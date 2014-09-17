@@ -210,7 +210,7 @@ class NutrientSources( models.Model ):
         super( NutrientSources, self ).save( *args, **kwargs )
 
     class Meta( object ):
-        ordering = [ "id" ]
+        ordering = [ "nutrient_source_id" ]
 
 
 class NutrientDerivations( models.Model ):
@@ -385,7 +385,7 @@ class Footnotes( models.Model ):
                                                blank = True,
                                                default = None )
     
-    footnote_number = models.PositiveIntegerFeild( "Footnote Number",
+    footnote_number = models.PositiveIntegerField( "Footnote Number",
                                                    help_text = "The number associated with this footnote." )
 
     footnote_type_choices = (
