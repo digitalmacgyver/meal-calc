@@ -12,7 +12,7 @@ import django
 django.setup()
 from meal_planner.models import *
 
-data_dir = '/wintmp/nutrition/'
+data_dir = '/wintmp/nutrition/full/'
 
 # Column transformations.
 
@@ -294,7 +294,7 @@ for df in sorted( files, key=lambda x: x['import_order'] ):
             field = field.strip( '~' )
             field_data = columns[col_no][1]( field )
             column_fields.append( field_data )
-            print "Column %s: %s -> %s" % ( columns[col_no][0], field, field_data )
+            #print "Column %s: %s -> %s" % ( columns[col_no][0], field, field_data )
             
         if pk_idx is not None:
             if name not in data:
@@ -477,7 +477,7 @@ for df in sorted( files, key=lambda x: x['import_order'] ):
                                                    title = cf[2],
                                                    year = cf[3],
                                                    journal = cf[4],
-                                                   volumne = cf[5],
+                                                   volume = cf[5],
                                                    issue = cf[6],
                                                    start_page = cf[7],
                                                    end_page = cf[8] )
@@ -509,6 +509,6 @@ NutrientCitations
 
 '''
 
-pp = pprint.PrettyPrinter( indent=4 )
+#pp = pprint.PrettyPrinter( indent=4 )
 
-pp.pprint( data )
+#pp.pprint( data )

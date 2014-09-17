@@ -47,7 +47,7 @@ class FoodItems( models.Model ):
                                     help_text = "Whether this food item is in the USDA Food and Nutrient Database for Dietary Studies (FNDDS)" )
     
     refuse_desc = models.CharField( "Description of Inedible Parts",
-                                    max_length = 125,
+                                    max_length = 135,
                                     help_text = "Description of inedible parts of food item, such as seeds or bone.",
                                     null = True,
                                     blank = True,
