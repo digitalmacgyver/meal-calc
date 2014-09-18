@@ -1,0 +1,25 @@
+{% if food_item %}
+  <table border="1px">
+    {% for instance in food_item_fields  %}
+    {% for field, value in instance.fields.items %}
+    <tr>
+    <td>{{ field }}</td><td>{{ value }}</td>
+    </tr>
+    {% endfor %}
+    {% endfor %}
+  </table>
+
+  <p>
+    Grams of nutrient per edible gram of Food Item:
+  <ul>
+  {% for nutrient in nutrients %}
+    <li><a href="/mp/fin/{{nutrient.pk}}/">{{ nutrient.nutrient }}</a> - {{ nutrient.amount }} g</a></li>
+  {% endfor %}
+  </ul>
+  </p>
+  <p>
+    <a href="/mp/">Back</a>
+  </p>
+{% else %}
+  <p>Out of stock on that food item...</p>
+{% endif %}

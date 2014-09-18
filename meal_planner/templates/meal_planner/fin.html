@@ -1,0 +1,19 @@
+{% if nutrient %}
+  <h2>{{ nutrient_desc }}</h2>
+
+  <table border="1px">
+    {% for instance in nutrient  %}
+    {% for field, value in instance.fields.items %}
+    <tr>
+    <td>{{ field }}</td><td>{{ value }}</td>
+    </tr>
+    {% endfor %}
+    {% endfor %}
+  </table>
+
+  <p>
+    <a href="/mp/fi/{{ food_item_id }}/">Back</a>
+  </p>
+{% else %}
+  <p>Couldn't find nutrient...</p>
+{% endif %}
