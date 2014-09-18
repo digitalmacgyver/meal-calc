@@ -86,3 +86,5 @@ SECURE_PROXY_SSL_HEADER = ( 'HTTP_X_FORWARDED_PROTO', 'https' )
 
 # Allow all host headers
 ALLOWED_HOSTS = ['*']
+
+TEMPLATE_DIRS = [ os.path.join( BASE_DIR, 'templates' ) ]

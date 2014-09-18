@@ -392,7 +392,7 @@ class FoodItemNutrients( models.Model ):
                           blank = True )
 
     def __unicode__( self ):
-        return "FoodItem: %d has %f %s of %s per gram" % ( self.food_item_id, self.amount, self.unit, self.nutrient )
+        return "FoodItem: %d has %f grams of %s per edible gram" % ( self.food_item_id.pk, self.amount, self.nutrient )
 
     # There is probably a better way to do this, using _meta, but
     # we"ll pass on that for the time being.

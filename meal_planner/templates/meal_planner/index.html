@@ -1,0 +1,12 @@
+{% if food_items %}
+  <p>
+    Food Item Database:
+  </p>
+  <ul>
+  {% for food_item in food_items %}
+    <li>{{ food_item }} - Food Item <a href="/mp/fi/{{food_item.id}}/">{{ food_item.id }}</a></li>
+  {% endfor %}
+  </ul>
+{% else %}
+  <p>Nothing in the kitchen...</p>
+{% endif %}
