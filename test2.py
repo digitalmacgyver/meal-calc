@@ -2,7 +2,7 @@
 
 import pprint
 
-import NutritionCalc as nc
+import lib.NutritionCalc as nc
 
 pp = pprint.PrettyPrinter( indent = 4 )
 
