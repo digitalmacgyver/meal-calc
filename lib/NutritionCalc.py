@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
 import copy
-from functools import partial
 import scipy.optimize
 import uuid
+
+from meal_planning.models import *
 
 '''
 NOTE: Food items live in a database. There is also a recipes table,
@@ -464,6 +465,8 @@ class FoodItems( object ):
             # Connect to database and load in all the food_items.
 
             FoodItems.food_items = {}
+
+            
 
             # DEBUG - for a toy implementation we try this.
             asparagus = FoodItem( 'asparagus',
