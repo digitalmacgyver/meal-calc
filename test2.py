@@ -9,12 +9,12 @@ pp = pprint.PrettyPrinter( indent = 4 )
 # An empty meal with some constraints and goals.
 initial_meal = nc.Meal(
     name = 'Test Meal',
-    nutrient_equality_constraints = [ ( 'kcal',  1000 ) ],
-    nutrient_limit_constraints = [ ( 'protein', 1000*.3*.8/4, 1000*.3*1.2/4 ),
-                                   ( 'carbs',   1000*.4*.8/4, 1000*.4*1.2/4 ),
-                                   ( 'fat',     1000*.3*.8/9, 1000*.3*1.2/9 ) ],
-    nutrient_goals = [ ( 'vitamin C', 0.075 ),
-                       ( 'calcium', 0.8 ) ]
+    nutrient_equality_constraints = [ ( 'Energy',  1000 ) ],
+    nutrient_limit_constraints = [ ( 'Protein', 1000*.3*.8/4, 1000*.3*1.2/4 ),
+                                   ( 'Carbohydrate, by difference',   1000*.4*.8/4, 1000*.4*1.2/4 ),
+                                   ( 'Total lipid (fat)',     1000*.3*.8/9, 1000*.3*1.2/9 ) ],
+    nutrient_goals = [ ( 'Vitamin C, total ascorbic acid', 0.075 ),
+                       ( 'Calcium, Ca', 0.8 ) ]
     )
 
 FIs = nc.FoodItems()

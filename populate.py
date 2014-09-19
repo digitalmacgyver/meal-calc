@@ -413,6 +413,14 @@ for df in sorted( files, key=lambda x: x['import_order'] ):
                 'IU' : Decimal( '.01' ),
                 'kcal' : Decimal( '.01' )
             }
+            # Once we convert amounts what the new DB unit will be.
+            db_nutrient_units = {
+                'g' : 'g',
+                'mg' : 'g',
+                'ug' : 'g',
+                'IU' : 'IU',
+                'kcal' : 'kcal'
+            }
 
             amount = nutrient_conversion_factors[unit] * column_fields[2]
             
@@ -426,7 +434,7 @@ for df in sorted( files, key=lambda x: x['import_order'] ):
 
             fin = FoodItemNutrients.objects.create( food_item_id = fi,
                                                     nutrient_id = nutrient_id,
-                                                    unit = find[1],
+                                                    unit = db_nutrient_units[unit],
                                                     infoods_tag = find[2],
                                                     nutrient = find[3],
                                                     sort_order = find[5],
