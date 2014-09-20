@@ -14,6 +14,9 @@ import meal_planner.models as db
 4. Verify everything still works.
 
 DEBUG - Why is it adding fat filler to butter meal?
+A - Because there were very few relevant nutrients (full allocation of butter only gets 3% of CA)
+
+DEBUG - What are subsequent meals on the for loop always getting the same values?
 
 5. Update nutrition elements to be in line with Paul's spreadsheet in
 the database.
@@ -32,6 +35,11 @@ def sum_lesser_squares( meal, food_items, food_item_amounts ):
        max( 0, ( 1 - % of goal met by food items and food item amounts )^2 )
     '''
     result = 0.0
+
+    #print "FITNESS FUNCTION WORKING ON:", [ str( x ) for x in food_items ]
+    #print "FITNESS FUNCTION WORKING ON:", [ x for x in food_item_amounts ]
+    #print "NUTRIENTS ARE:", [ x.get_nutrients() for x in food_items[:1] ]
+
     for nutrient, goal in meal.nutrient_goals.items():
         current = 0.0
         if goal != 0:
@@ -49,10 +57,13 @@ def sum_lesser_squares( meal, food_items, food_item_amounts ):
             if food_item_id in food_items_map:
                 result += ( max( 0.0, ( goal - food_item_amounts[food_items_map[food_item_id]] ) ) / goal )**2
 
+    #print "RESULT WAS:", result
+    #print "FITNESS FUNCTION RESULT WAS:", result
+
     return result
 
 
-def meal_planner( meal, food_items, filler_items=[], fitness_function=sum_lesser_squares ):
+def meal_planner( meal, food_items, filler_items=None, fitness_function=sum_lesser_squares, verbose=False ):
     '''Inputs:
     * meal - A Meal object
     * fitness_function - A function to be minimized, it takes as input
@@ -79,7 +90,17 @@ def meal_planner( meal, food_items, filler_items=[], fitness_function=sum_lesser
     added_food_item meal ) tuple is added to the output.
 
     '''
+
+    if filler_items is None:
+        filler_items = []
+
+    #import pdb
+    #pdb.set_trace()
+
     result_meals = []
+
+    #for fi in food_items:
+    #    print "BEFORE NUTRIENTS ARE:", fi.uid, fi.get_nutrients()
 
     for fi in food_items:
         # The optimizer assumes each ingredient is only present once -
@@ -87,12 +108,13 @@ def meal_planner( meal, food_items, filler_items=[], fitness_function=sum_lesser
         # and filler items.
         seen = {}
         fitness_food_items = []
+
+        #print [ str( x[0] ) for x in meal.get_food_items() ]
+
         for ingredient in [ x[0] for x in meal.get_food_items() ] + [ fi ] + filler_items:
             if ingredient.uid not in seen:
                 fitness_food_items.append( ingredient )
                 seen[ingredient.uid] = True
-
-        fitness_food_items = [ x[0] for x in meal.get_food_items() ] + [ fi ] + filler_items
 
         # Inequality constraints are to be non-negative.
         constraints = []
@@ -103,7 +125,7 @@ def meal_planner( meal, food_items, filler_items=[], fitness_function=sum_lesser
                 def make_closure( amount, nutrient, fitness_food_items ):
                     def equality_function( amounts ):
                         result = amount - reduce( lambda tot, ffi_idx: tot + fitness_food_items[ffi_idx].get_nutrients()[nutrient]*amounts[ffi_idx], range( len( amounts ) ), 0 )
-                        #print "NUTRIENT, GOAL, DIFFERENCE, FFI", nutrient, amount, result, fitness_food_items
+                        #print "NUTRIENT, GOAL, DIFFERENCE, FFI", nutrient, amount, result, [ str( x ) for x in fitness_food_items ]
                         return result
                     return equality_function
 
@@ -164,21 +186,23 @@ def meal_planner( meal, food_items, filler_items=[], fitness_function=sum_lesser
                                           method='SLSQP', 
                                           bounds=bounds, 
                                           constraints=constraints,
-                                          options = { 'disp' : True } )
+                                          options = { 'disp' : verbose } )
         
-        print "RESULT WAS: ", result
-
+        #print "RESULT WAS: ", result
+        
         if result['success']:
             meal_score = result['fun']
             meal_food_items = []
             for ffi_idx, food_item_amount in enumerate( result['x'] ):
                 food_item = fitness_food_items[ffi_idx]
                 meal_food_items.append( ( food_item.uid, food_item_amount ) )
-            new_meal = copy.deepcopy( meal )
+            #new_meal = copy.deepcopy( meal )
+            new_meal = copy.copy( meal )
             new_meal.replace_food_items( meal_food_items )
-            result_meals.append( ( meal_score, fi, new_meal ) )
 
-    return sorted( result_meals, reverse=True )
+        result_meals.append( ( meal_score, fi, new_meal ) )
+
+    return sorted( result_meals )
                 
             
 class Meal( object ):
@@ -360,7 +384,7 @@ class FoodItem( object ):
 
     '''
 
-    def __init__( self, name, nutrients={}, serving_size=None, uid=None ):
+    def __init__( self, name, nutrients=None, serving_size=None, uid=None ):
         '''Inputs:
         * name - The name of this food item.
         * nutrients - Optional, a dictionary of
@@ -372,13 +396,28 @@ class FoodItem( object ):
         self.NUTs = Nutrients().get_nutrient_types()
 
         self.name = name
-        self._nutrients = nutrients
+        if nutrients is None:
+            self._nutrients = {}
+        else:
+            self._nutrients = nutrients
         self.serving_size = serving_size
 
         if uid is not None:
             self.uid = uid
         else:
             self.uid = str( uuid.uuid4() )
+
+    def __unicode__( self ):
+        if self.name:
+            return self.name
+        else:
+            return ''
+
+    def __str__( self ):
+        return self.__unicode__()
+
+    def __repr__( self ):
+        return self.uid
 
     def add_nutrient( self, nutrient, amount_per_gram ):
         if nutrient in self.NUTs:
@@ -401,7 +440,7 @@ class Recipe( FoodItem ):
     * get_nutrients - Returns a dictionary of nutrient_name->amount per gram of recipe
     '''
 
-    def __init__( self, name, ingredients=[], serving_size=None, uid=None ):
+    def __init__( self, name, ingredients=None, serving_size=None, uid=None ):
         '''Inputs:
         * name - The name of this food item.
         * ingredients - Optional, an array of FoodItem, amount tuples.
@@ -413,8 +452,9 @@ class Recipe( FoodItem ):
 
         self.FIs = FoodItems()
 
-        for food_item_id, amount in ingredients:
-            self.add_ingredient( food_item_id, amount )
+        if ingredients is not None:
+            for food_item_id, amount in ingredients:
+                self.add_ingredient( food_item_id, amount )
 
     def add_nutrient( self ):
         '''You can't add nutrients to a recipe, only ingredients.'''
@@ -484,60 +524,38 @@ class FoodItems( object ):
             # DEBUG - for the time being we just get the first food item.
             dbfis = db.FoodItems.objects.all()
             # DEBUG - let's see some SQL
-            print dbfis.query
-            dbfis = dbfis[0]
-           
+            #print dbfis.query
+            #dbfis = [ dbfis[0], dbfis[10] ]
+            dbfis = [ dbfis[0] ]
+
             NUTs = Nutrients().get_nutrient_types()
             
-            # DEBUG
-            #for dbfi in dbfis:
-            for dbfi in [ dbfis ]:
+            for dbfi in dbfis:
                 name = dbfi.long_desc
                 uid = dbfi.uid
                 
                 dbss = db.FoodItemServingSizes.objects.filter( food_item_id__pk = dbfi.pk )
                 # DEBUG show me SQL
-                print dbss.query
+                #print dbss.query
                 dbss = dbss[0]
 
                 dbnuts = db.FoodItemNutrients.objects.filter( food_item_id__pk = dbfi.pk )
                 # DEBUG show me sql
-                print dbnuts.query
+                #print dbnuts.query
 
                 fi = FoodItem( name, serving_size=dbss.grams, uid=uid )
 
                 for dbnut in dbnuts:
                     if dbnut.nutrient in NUTs:
-                        print dbnut.nutrient, dbnut.amount
+                        #print dbnut.nutrient, dbnut.amount
                         fi.add_nutrient( dbnut.nutrient, float( dbnut.amount ) )
+
+                #print "BEGIN NUTRIENTS ARE:", fi.uid, fi.get_nutrients()
 
                 FoodItems.food_items[fi.uid] = fi
 
-            # DEBUG - for a toy implementation we try this.
-            '''
-            asparagus = FoodItem( 'asparagus',
-                                  nutrients = {
-                                      'vitamin C' : 0.000077,
-                                      'calcium' : .00023,
-                                      'kcal' : 0.22, 
-                                      'protein' : 0.024,
-                                      'carbs' : 0.0411,
-                                      'fat' : 0.0198/9
-                                  } )
-            FoodItems.food_items[asparagus.uid] = asparagus
+                #print "AFTER BEGIN ASSIGNMENT NUTRIENTS ARE:", FoodItems.food_items[fi.uid].get_nutrients()
 
-            chicken = FoodItem( 'chicken',
-                                nutrients = {
-                                    'vitamin C' : 0,
-                                    'calcium' : 0.00006,
-                                    'kcal' : 0.79,
-                                    'protein' : 0.6/4,
-                                    'carbs' : 0.0868/4,
-                                    'fat' : 0.0351/9
-                                } )
-            FoodItems.food_items[chicken.uid] = chicken
-            '''
-                   
             pfill = FoodItem( 'protein filler',
                               nutrients = {
                                   'Energy' : 4.0,
@@ -571,7 +589,31 @@ class FoodItems( object ):
                               } )
             FoodItems.food_items[ffill.uid] = ffill
 
+            # DEBUG - for a toy implementation we try this.
+            '''
+            asparagus = FoodItem( 'asparagus',
+                                  nutrients = {
+                                      'vitamin C' : 0.000077,
+                                      'calcium' : .00023,
+                                      'kcal' : 0.22, 
+                                      'protein' : 0.024,
+                                      'carbs' : 0.0411,
+                                      'fat' : 0.0198/9
+                                  } )
+            FoodItems.food_items[asparagus.uid] = asparagus
 
+            chicken = FoodItem( 'chicken',
+                                nutrients = {
+                                    'vitamin C' : 0,
+                                    'calcium' : 0.00006,
+                                    'kcal' : 0.79,
+                                    'protein' : 0.6/4,
+                                    'carbs' : 0.0868/4,
+                                    'fat' : 0.0351/9
+                                } )
+            FoodItems.food_items[chicken.uid] = chicken
+            '''
+                   
     def get_food_item( self, food_item_id, types = [] ):
         '''Given a FoodItem.id returns the corresponding FoodItem object. If
         types is provided return only items whose types match those
