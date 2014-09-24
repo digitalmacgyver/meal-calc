@@ -2,6 +2,8 @@ from django.core import serializers
 from django.shortcuts import render
 from django.http import HttpResponse
 
+import scipy.optimize
+
 from meal_planner.models import *
 
 # Create your views here.
@@ -9,7 +11,8 @@ from meal_planner.models import *
 def index( request ):
     food_items = FoodItems.objects.all()
 
-    context = { 'food_items' : food_items }
+    context = { 'food_items' : food_items,
+                'boilerplate' : scipy.optimize.minimize.func_doc }
     return render( request, 'meal_planner/index.html', context )
 
 def food_item( request, food_item_id ):

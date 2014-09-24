@@ -1,16 +1,6 @@
 TODO:
 
-2. Update populate.py to use Paul's nutrition spreadsheet.
-   * Do we need to add a "presentation name" column to things?
-
-3. Update fitness function to lump together the quantities in Paul's
-thing.
-
-4. Re-create database with fewer nutrients.
-
 4.5. Do some local performance testing.
-
-5. Push new DB to production.
 
 6. Verify scipi is working on the site.
 
@@ -85,7 +75,7 @@ source env/bin/activate
 sudo apt-get install postgresql postgresql-contrib
 sudo -u postgres psql postgres
 \password postgres
-Password = robochef
+Password = zinc_saucier
 
 sudo apt-get install postgresql-server-dev
 
