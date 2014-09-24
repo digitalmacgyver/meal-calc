@@ -39,6 +39,19 @@ def date_handler( value ):
 
 ndate_handler = nullable( date_handler )
 
+nutrients_of_interest = {}
+
+nconf = open( "nutrients.conf" )
+for line in nconf:
+    if re.search( r'^\s*$', line ):
+        continue
+    elif re.match( r'^\s*#', line ):
+        continue
+    else:
+        nutrients_of_interest[ line.rstrip() ] = True
+nconf.close()
+
+
 food_group_desc_fields = [
     ( 'food_group_id', unicode ),
     ( 'food_group_desc', unicode )
@@ -398,6 +411,9 @@ for df in sorted( files, key=lambda x: x['import_order'] ):
             nutrient_id = column_fields[1]
             fi = database['FoodItems'][ndb_id]
 
+            if nutrient_id not in nutrients_of_interest:
+                continue
+
             find = data['FoodItemNutrientDefinition'][nutrient_id]
 
             unit = find[1]
@@ -465,6 +481,9 @@ for df in sorted( files, key=lambda x: x['import_order'] ):
             ndb_id = column_fields[0]
             nutrient_id = column_fields[3]
 
+            if ndb_id not in database['FoodItemNutrients']:
+                continue
+
             fi = None
             fin = None
 
@@ -492,6 +511,11 @@ for df in sorted( files, key=lambda x: x['import_order'] ):
             nutrient_id = column_fields[1]
             citation_id = column_fields[2]
 
+            if ndb_id not in database['FoodItemNutrients']:
+                continue
+            if nutrient_id not in database['FoodItemNutrients'][ndb_id]:
+                continue
+                
             fin = database['FoodItemNutrients'][ndb_id][nutrient_id]
             #fin = FoodItemNutrients.objects.get( pk = database['FoodItemNutrients'][ndb_id][nutrient_id] )
             cf = data['NutrientCitations'][citation_id]

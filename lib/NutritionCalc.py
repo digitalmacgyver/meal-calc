@@ -9,25 +9,6 @@ django.setup()
 
 import meal_planner.models as db
 
-'''NEXT UP:
-
-4. Verify everything still works.
-
-DEBUG - Why is it adding fat filler to butter meal?
-A - Because there were very few relevant nutrients (full allocation of butter only gets 3% of CA)
-
-DEBUG - What are subsequent meals on the for loop always getting the same values?
-
-5. Update nutrition elements to be in line with Paul's spreadsheet in
-the database.
-
-6. Update Nutrients class to track the nutrition elements in Paul's
-spread sheet.
-
-7. Performance test for 1, 10, 100, 1000 food items.
-
-'''
-
 def sum_lesser_squares( meal, food_items, food_item_amounts ):
     '''A fitness function to be minimized, returns:
     
@@ -109,9 +90,22 @@ def meal_planner( meal, food_items, filler_items=None, fitness_function=sum_less
         seen = {}
         fitness_food_items = []
 
-        #print [ str( x[0] ) for x in meal.get_food_items() ]
+        # First work through and potentially de-duplicate any
+        # redundant items in the meal itself.
+        for ingredient in [ x[0] for x in meal.get_food_items() ]:
+            if ingredient.uid not in seen:
+                fitness_food_items.append( ingredient )
+                seen[ingredient.uid] = True
 
-        for ingredient in [ x[0] for x in meal.get_food_items() ] + [ fi ] + filler_items:
+        # If this meal already contains the food item we're
+        # considering, just move on.
+        if fi.uid in seen:
+            continue
+        else:
+            fitness_food_items.append( fi )
+
+        # Now add any filler items not already in the meal.
+        for ingredient in filler_items:
             if ingredient.uid not in seen:
                 fitness_food_items.append( ingredient )
                 seen[ingredient.uid] = True
@@ -200,7 +194,7 @@ def meal_planner( meal, food_items, filler_items=None, fitness_function=sum_less
             new_meal = copy.copy( meal )
             new_meal.replace_food_items( meal_food_items )
 
-        result_meals.append( ( meal_score, fi, new_meal ) )
+            result_meals.append( ( meal_score, fi, new_meal ) )
 
     return sorted( result_meals )
                 
@@ -396,10 +390,12 @@ class FoodItem( object ):
         self.NUTs = Nutrients().get_nutrient_types()
 
         self.name = name
-        if nutrients is None:
-            self._nutrients = {}
-        else:
-            self._nutrients = nutrients
+        self._nutrients = {}
+        self.zero_out_nutrients()
+        if nutrients is not None:
+            for nutrient, amount in nutrients.items():
+                self._nutrients[nutrient] = amount
+
         self.serving_size = serving_size
 
         if uid is not None:
@@ -418,6 +414,10 @@ class FoodItem( object ):
 
     def __repr__( self ):
         return self.uid
+
+    def zero_out_nutrients( self ):
+        for nutrient in self.NUTs:
+            self._nutrients[nutrient] = 0.0
 
     def add_nutrient( self, nutrient, amount_per_gram ):
         if nutrient in self.NUTs:
@@ -489,6 +489,7 @@ class Nutrients( object ):
     }
     '''
 
+    '''
     nutrients = {
         'Energy' : 'kcal',
         'Carbohydrate, by difference' : 'g',
@@ -497,12 +498,27 @@ class Nutrients( object ):
         'Calcium, Ca' : 'g',
         'Total lipid (fat)' : 'g'
     }
+    '''
+    nutrients = None
 
     def __init__( self ):
-        self.nutrients = Nutrients.nutrients
+        if Nutrients.nutrients is None:
+            db_nutrients = db.FoodItemNutrients.objects.values( 'nutrient', 'unit' ).distinct()
+            
+            nutrients = {}
+
+            for nutrient in db_nutrients:
+                nutrients[nutrient['nutrient']] = nutrient['unit']
+             
+            # Special aggregated nutrients.
+            nutrients['Fat - Unsaturated'] = 'g'
+            nutrients['Methionine and Cystine'] = 'g'
+            nutrients['Phenylalanine and Tyrosine'] = 'g'
+
+            Nutrients.nutrients = nutrients
 
     def get_nutrient_types( self ):
-        return self.nutrients
+        return Nutrients.nutrients
 
 class FoodItems( object ):
     '''Singleton-eqsue class for managing our database of FoodItems and Recipes.
@@ -522,11 +538,12 @@ class FoodItems( object ):
             FoodItems.food_items = {}
 
             # DEBUG - for the time being we just get the first food item.
-            dbfis = db.FoodItems.objects.all()
+            #dbfis = db.FoodItems.objects.all()
+            dbfis = db.FoodItems.objects.iterator()
             # DEBUG - let's see some SQL
             #print dbfis.query
             #dbfis = [ dbfis[0], dbfis[10] ]
-            dbfis = [ dbfis[0] ]
+            #dbfis = dbfis[:100]
 
             NUTs = Nutrients().get_nutrient_types()
             
@@ -537,18 +554,45 @@ class FoodItems( object ):
                 dbss = db.FoodItemServingSizes.objects.filter( food_item_id__pk = dbfi.pk )
                 # DEBUG show me SQL
                 #print dbss.query
-                dbss = dbss[0]
+                if len( dbss ):
+                    serving_size = dbss[0].grams
+                else:
+                    serving_size = None
 
                 dbnuts = db.FoodItemNutrients.objects.filter( food_item_id__pk = dbfi.pk )
                 # DEBUG show me sql
                 #print dbnuts.query
 
-                fi = FoodItem( name, serving_size=dbss.grams, uid=uid )
+                fi = FoodItem( name, serving_size=serving_size, uid=uid )
+
+                monounsaturated = 0
+                polyunsaturated = 0
+                methionine = 0
+                cystine = 0
+                phenylalanine = 0
+                tyrosine = 0
 
                 for dbnut in dbnuts:
                     if dbnut.nutrient in NUTs:
                         #print dbnut.nutrient, dbnut.amount
                         fi.add_nutrient( dbnut.nutrient, float( dbnut.amount ) )
+                        
+                        if dbnut.nutrient == 'Methionine':
+                            methionine = float( dbnut.amount )
+                        elif dbnut.nutrient == 'Cystine':
+                            cystine = float( dbnut.amount )
+                        elif dbnut.nutrient == 'Fatty acids, total monounsaturated':
+                            monounsaturated = float( dbnut.amount )
+                        elif dbnut.nutrient == 'Fatty acids, total polyunsaturated':
+                            polyunsaturated = float( dbnut.amount )
+                        elif dbnut.nutrient == 'Phenylalanine':
+                            phenylalanine = float( dbnut.amount )
+                        elif dbnut.nutrient == 'Tyrosine':
+                            tyrosine = float( dbnut.amount )
+
+                fi.add_nutrient( 'Fat - Unsaturated', monounsaturated + polyunsaturated )
+                fi.add_nutrient( 'Methionine and Cystine', methionine + cystine )
+                fi.add_nutrient( 'Phenylalanine and Tyrosine', phenylalanine + tyrosine )
 
                 #print "BEGIN NUTRIENTS ARE:", fi.uid, fi.get_nutrients()
 
@@ -556,64 +600,33 @@ class FoodItems( object ):
 
                 #print "AFTER BEGIN ASSIGNMENT NUTRIENTS ARE:", FoodItems.food_items[fi.uid].get_nutrients()
 
+            pfill_nuts = {}
+            for nut in NUTs.keys():
+                pfill_nuts[nut] = 0.0
+            pfill_nuts['Energy'] = 4.0
+            pfill_nuts['Protein'] = 1.0
             pfill = FoodItem( 'protein filler',
-                              nutrients = {
-                                  'Energy' : 4.0,
-                                  'Carbohydrate, by difference' : 0.0,
-                                  'Protein' : 1.0,
-                                  'Vitamin C, total ascorbic acid' : 0,
-                                  'Calcium, Ca' : 0,
-                                  'Total lipid (fat)' : 0.0
-                              } )
+                              nutrients = pfill_nuts )
             FoodItems.food_items[pfill.uid] = pfill
 
+            cfill_nuts = {}
+            for nut in NUTs.keys():
+                cfill_nuts[nut] = 0.0
+            cfill_nuts['Energy'] = 4.0
+            cfill_nuts['Carbyhydrate, by difference'] = 1.0
             cfill = FoodItem( 'carbs filler',
-                              nutrients = {
-                                  'Energy' : 4.0,
-                                  'Carbohydrate, by difference' : 1.0,
-                                  'Protein' : 0.0,
-                                  'Vitamin C, total ascorbic acid' : 0,
-                                  'Calcium, Ca' : 0,
-                                  'Total lipid (fat)' : 0.0
-                              } )
+                              nutrients = cfill_nuts )
             FoodItems.food_items[cfill.uid] = cfill
 
+            ffill_nuts = {}
+            for nut in NUTs.keys():
+                ffill_nuts[nut] = 0.0
+            ffill_nuts['Energy'] = 9.0
+            ffill_nuts['Total lipid (fat)'] = 1.0
             ffill = FoodItem( 'fat filler',
-                              nutrients = {
-                                  'Energy' : 9.0,
-                                  'Carbohydrate, by difference' : 0.0,
-                                  'Protein' : 0.0,
-                                  'Vitamin C, total ascorbic acid' : 0,
-                                  'Calcium, Ca' : 0,
-                                  'Total lipid (fat)' : 1.0
-                              } )
+                              nutrients = ffill_nuts )
             FoodItems.food_items[ffill.uid] = ffill
 
-            # DEBUG - for a toy implementation we try this.
-            '''
-            asparagus = FoodItem( 'asparagus',
-                                  nutrients = {
-                                      'vitamin C' : 0.000077,
-                                      'calcium' : .00023,
-                                      'kcal' : 0.22, 
-                                      'protein' : 0.024,
-                                      'carbs' : 0.0411,
-                                      'fat' : 0.0198/9
-                                  } )
-            FoodItems.food_items[asparagus.uid] = asparagus
-
-            chicken = FoodItem( 'chicken',
-                                nutrients = {
-                                    'vitamin C' : 0,
-                                    'calcium' : 0.00006,
-                                    'kcal' : 0.79,
-                                    'protein' : 0.6/4,
-                                    'carbs' : 0.0868/4,
-                                    'fat' : 0.0351/9
-                                } )
-            FoodItems.food_items[chicken.uid] = chicken
-            '''
-                   
     def get_food_item( self, food_item_id, types = [] ):
         '''Given a FoodItem.id returns the corresponding FoodItem object. If
         types is provided return only items whose types match those
