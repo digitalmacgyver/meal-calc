@@ -2,9 +2,6 @@
   <p>
     Food Item Database:
   </p>
-  <pre>
-    {{ boilerplate }}
-  </pre>
   <ul>
   {% for food_item in food_items %}
     <li>{{ food_item }} - Food Item <a href="/mp/fi/{{food_item.id}}/">{{ food_item.id }}</a></li>

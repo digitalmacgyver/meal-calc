@@ -13,7 +13,7 @@ def sum_lesser_squares( meal, food_items, food_item_amounts ):
     '''A fitness function to be minimized, returns:
     
     sum over all food_items and nutrition goals such that:
-       max( 0, ( 1 - % of goal met by food items and food item amounts )^2 )
+       max( 0, ( 1 - % of goal met by food items and food item amounts ) )^2
     '''
     result = 0.0
 
@@ -27,7 +27,7 @@ def sum_lesser_squares( meal, food_items, food_item_amounts ):
             for fi_idx, fi in enumerate( food_items ):
                 current += fi.get_nutrients()[nutrient] * food_item_amounts[fi_idx]
 
-            result += ( max( 0.0, ( goal - current ) ) / goal )**2
+            result += ( max( 0.0, ( goal - current ) / goal ) )**2
 
     food_items_map = {}
     for fi_idx, fi in enumerate( food_items ):
@@ -36,7 +36,41 @@ def sum_lesser_squares( meal, food_items, food_item_amounts ):
     for food_item_id, goal in meal.food_item_goals.items():
         if goal != 0:
             if food_item_id in food_items_map:
-                result += ( max( 0.0, ( goal - food_item_amounts[food_items_map[food_item_id]] ) ) / goal )**2
+                result += ( max( 0.0, ( goal - food_item_amounts[food_items_map[food_item_id]] ) / goal ) )**2
+
+    #print "RESULT WAS:", result
+    #print "FITNESS FUNCTION RESULT WAS:", result
+
+    return result
+
+def sum_centered_on_half( meal, food_items, food_item_amounts ):
+    '''A fitness function to be minimized, returns:
+    
+    sum over all food_items and nutrition goals such that:
+       abs( 0.5 - % of goal met by food items and food item amounts )^2
+    '''
+    result = 0.0
+
+    #print "FITNESS FUNCTION WORKING ON:", [ str( x ) for x in food_items ]
+    #print "FITNESS FUNCTION WORKING ON:", [ x for x in food_item_amounts ]
+    #print "NUTRIENTS ARE:", [ x.get_nutrients() for x in food_items[:1] ]
+
+    for nutrient, goal in meal.nutrient_goals.items():
+        current = 0.0
+        if goal != 0:
+            for fi_idx, fi in enumerate( food_items ):
+                current += fi.get_nutrients()[nutrient] * food_item_amounts[fi_idx]
+
+            result += abs( 0.5 - ( ( goal - current ) / goal ) )**2
+
+    food_items_map = {}
+    for fi_idx, fi in enumerate( food_items ):
+        food_items_map[fi.uid] = fi_idx
+
+    for food_item_id, goal in meal.food_item_goals.items():
+        if goal != 0:
+            if food_item_id in food_items_map:
+                result += abs( 0.5 - ( ( goal - food_item_amounts[food_items_map[food_item_id]] ) / goal ) )**2
 
     #print "RESULT WAS:", result
     #print "FITNESS FUNCTION RESULT WAS:", result
@@ -538,12 +572,12 @@ class FoodItems( object ):
             FoodItems.food_items = {}
 
             # DEBUG - for the time being we just get the first food item.
-            #dbfis = db.FoodItems.objects.all()
-            dbfis = db.FoodItems.objects.iterator()
+            dbfis = db.FoodItems.objects.all()
+            #dbfis = db.FoodItems.objects.iterator()
             # DEBUG - let's see some SQL
             #print dbfis.query
             #dbfis = [ dbfis[0], dbfis[10] ]
-            #dbfis = dbfis[:100]
+            #dbfis = dbfis[:1000]
 
             NUTs = Nutrients().get_nutrient_types()
             
@@ -627,11 +661,17 @@ class FoodItems( object ):
                               nutrients = ffill_nuts )
             FoodItems.food_items[ffill.uid] = ffill
 
-    def get_food_item( self, food_item_id, types = [] ):
+    def get_food_item( self, food_item_id, types = None ):
         '''Given a FoodItem.id returns the corresponding FoodItem object. If
         types is provided return only items whose types match those
         in the types array, e.g. FoodItem or Recipe.
         '''
+
+        #import pdb
+        #pdb.set_trace()
+
+        if types is None:
+            types = []
 
         food_item = None
         if food_item_id in FoodItems.food_items:
@@ -647,11 +687,14 @@ class FoodItems( object ):
                     return food_item
             raise Exception( "Food item %s exists, but is of the wrong type: %s" % ( food_item_id, food_item.type() ) )
 
-    def get_food_items( self, types = [] ):
+    def get_food_items( self, types = None ):
         '''Returns an array of all food items.  If types is provided, the
         result will be restricted to the provided types, e.g. Recipe
         or FoodItem.
         '''
+        if types is None:
+            types = []
+
         all_types = False
         types_map = {}
         if len( types ) == 0:
