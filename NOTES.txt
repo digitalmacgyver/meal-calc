@@ -1,20 +1,30 @@
 TODO:
 
-4.5. Do some local performance testing.
+IN PROGRESS: 4.5. Do some local performance testing.
 
-6. Verify scipi is working on the site.
+1. Change Nutrition_calc to either offer _by_id methods and standard
+ones that act on uids or objects, or change the function behaviors to
+be dynamic.
 
-7. Reach out to guy from Mona's thing, set up time for him, Paul, and
-I to all talk.
+1. Sample data for three classes:
+
+IN PROGRESS A. Max of 100% DRI.
+B. Max of 50% DRI.
+
+C. Optimization centered on 50% DRI, things get worse as you begin to
+exceed 50%.
+
+Form inputs: version 1:
+     * Total calories.
+     * Calculates ranges of macronutrients based on it.
+     * Doesn't do any age/gender stuff.
+     * Just prints out similar data to what is printed out on the screen.
 
 --
 
 Then, in no order:
 * Put food in groups
 * Recreate database with only food items of interest.
-
-* Create simple form that inputs calories, then iteratively consumes
-  food items, and prints out what the meal so far is.
 
 ---
 

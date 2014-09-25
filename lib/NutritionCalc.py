@@ -332,6 +332,8 @@ class Meal( object ):
             self.add_food_item_goal( food_item_id, amount )
 
     def add_food_item( self, food_item_id, amount ):
+        #import pdb
+        #pdb.set_trace()
         if self.FIs.get_food_item( food_item_id ): 
             self.food_items[food_item_id] = amount
 
@@ -577,7 +579,7 @@ class FoodItems( object ):
             # DEBUG - let's see some SQL
             #print dbfis.query
             #dbfis = [ dbfis[0], dbfis[10] ]
-            #dbfis = dbfis[:1000]
+            #dbfis = dbfis[:50]
 
             NUTs = Nutrients().get_nutrient_types()
             

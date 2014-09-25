@@ -170,6 +170,23 @@ def planner( request ):
             # Now food_group is either our last item or the next one
             # we want to process.
             if food_group == 'done':
+                initial_meal = nc.Meal( 'Current Meal',
+                                        nutrient_equality_constraints = [ ( 'Energy', energy ) ],
+                                        nutrient_limit_constraints = [ ( 'Protein', energy*.3*.8/4, energy*.3*1.2/4 ),
+                                                                       ( 'Carbohydrate, by difference',   energy*.4*.8/4, energy*.4*1.2/4 ),
+                                                                       ( 'Total lipid (fat)',     energy*.3*.8/9, energy*.3*1.2/9 ) ],
+                                        nutrient_goals = nutrient_goals )
+
+                selected_foods = { form.data['food_choices'] : 'selected_foods_%s' % ( form.data['food_choices'] ) }
+                for food_item_label in [ x for x in form.data.keys() if x.startswith( 'selected_foods_' ) ]:
+                    selected_foods[food_item_label[15:]] = form.data[food_item_label]
+                    initial_meal.add_food_item( food_item_label[15:], 0 )
+
+                result = nc.meal_planner( initial_meal, [ FIs.get_food_item( form.data['food_choices'] ) ], [ pfill, cfill, ffill ] )
+
+                if len( result ):
+                    current_score, current_ingredient, current_meal = result[0]
+
                 form = None
             else:
                 initial_meal = nc.Meal( 'Current Meal',
@@ -181,11 +198,11 @@ def planner( request ):
                 
 
 
-
-                selected_foods = {}
+                # DEBUG - We're only getting one ingredient at a time.
+                selected_foods = { form.data['food_choices'] : 'selected_foods_%s' % ( form.data['food_choices'] ) }
                 for food_item_label in [ x for x in form.data.keys() if x.startswith( 'selected_foods_' ) ]:
                     selected_foods[food_item_label[15:]] = form.data[food_item_label]
-                    initial_meal.add_food_item( FIs.get_food_item( food_item_label[15:] ), 0 )
+                    initial_meal.add_food_item( food_item_label[15:], 0 )
                     
                 #import pdb
                 #pdb.set_trace()
@@ -196,7 +213,8 @@ def planner( request ):
 
                 new_ingredients = []
 
-                db_food_items = FoodItems.objects.filter( food_group_id__in = food_groups[food_group].keys() )
+                # DEBUG
+                db_food_items = FoodItems.objects.filter( food_group_id__in = food_groups[food_group].keys() )[:21]
                 
                 for db_food_item in db_food_items:
                     new_ingredients.append( FIs.get_food_item( db_food_item.uid ) )
@@ -224,7 +242,8 @@ def planner( request ):
 
         food_group = food_group_ordering[0]
 
-        db_food_items = FoodItems.objects.filter( food_group_id__in = food_groups[food_group].keys() )
+        # DEBUG
+        db_food_items = FoodItems.objects.filter( food_group_id__in = food_groups[food_group].keys() )[:21]
 
         new_ingredients = []
         for db_food_item in db_food_items:
