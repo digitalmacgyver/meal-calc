@@ -13,6 +13,7 @@ django.setup()
 from meal_planner.models import *
 
 data_dir = '/wintmp/nutrition/full/'
+#data_dir = '/wintmp/nutrition/'
 
 # Column transformations.
 
@@ -277,6 +278,137 @@ files = [
 data = {}
 database = {}
 
+limit_food_items = True
+
+food_items_to_populate = [
+    '01009',
+    '01016',
+    '01028',
+    '01079',
+    '01082',
+    '01085',
+    '01086',
+    '01120',
+    '01128',
+    '01129',
+    '05000',
+    '05007',
+    '05058',
+    '05062',
+    '05066',
+    '05093',
+    '05192',
+    '05193',
+    '05306',
+    '05664',
+    '05670',
+    '07008',
+    '07011',
+    '07028',
+    '07043',
+    '07046',
+    '07069',
+    '07089',
+    '07917',
+    '07933',
+    '07940',
+    '07945',
+    '07973',
+    '09003',
+    '09016',
+    '09020',
+    '09038',
+    '09040',
+    '09044',
+    '09079',
+    '09096',
+    '09201',
+    '09209',
+    '09210',
+    '10134',
+    '10136',
+    '11008',
+    '11019',
+    '11081',
+    '11091',
+    '11099',
+    '11124',
+    '11136',
+    '11168',
+    '11181',
+    '11303',
+    '12063',
+    '12085',
+    '12132',
+    '12152',
+    '12637',
+    '13055',
+    '13067',
+    '13148',
+    '13438',
+    '13439',
+    '13456',
+    '13459',
+    '13479',
+    '13496',
+    '14042',
+    '14043',
+    '14044',
+    '14059',
+    '14060',
+    '14062',
+    '14072',
+    '14073',
+    '14079',
+    '14087',
+    '14215',
+    '14238',
+    '14243',
+    '14385',
+    '14406',
+    '14411',
+    '15016',
+    '15077',
+    '15119',
+    '15121',
+    '15136',
+    '15148',
+    '15151',
+    '15209',
+    '16006',
+    '16028',
+    '16038',
+    '16043',
+    '16057',
+    '16072',
+    '16090',
+    '16097',
+    '16103',
+    '16110',
+    '16126',
+    '16386',
+    '17148',
+    '18003',
+    '18015',
+    '18023',
+    '18029',
+    '18035',
+    '18047',
+    '18064',
+    '18104',
+    '18158',
+    '18278',
+    '18344',
+    '18350',
+    '18363',
+    '18364',
+    '20045',
+    '20053',
+    '20094',
+    '20095',
+    '20106',
+]
+
 for df in sorted( files, key=lambda x: x['import_order'] ):
     filename = "%s%s" % ( data_dir, df['filename'] )
     columns = df['columns']
@@ -363,6 +495,11 @@ for df in sorted( files, key=lambda x: x['import_order'] ):
         elif name == 'FoodItems':
             food_group = data['FoodGroups'][column_fields[1]]
 
+            food_item_id = column_fields[0]
+            
+            if limit_food_items and ( food_item_id not in food_items_to_populate ):
+                continue
+            
             fi = FoodItems.objects.create( uid = str( uuid.uuid4() ),
                                            ndb_id = column_fields[0],
                                            food_group_id = column_fields[1],
@@ -387,6 +524,10 @@ for df in sorted( files, key=lambda x: x['import_order'] ):
             
         elif name == 'LanguaLLink':
             ndb_id = column_fields[0]
+
+            if ndb_id not in database['FoodItems']:
+                continue
+
             langual_code = column_fields[1]
             langual_desc = data['LanguaLDesc'][langual_code][1]
             fi = database['FoodItems'][ndb_id]
@@ -397,6 +538,10 @@ for df in sorted( files, key=lambda x: x['import_order'] ):
 
         elif name == 'FoodItemServingSizes':
             ndb_id = column_fields[0]
+
+            if ndb_id not in database['FoodItems']:
+                continue
+
             fi = database['FoodItems'][ndb_id]
 
             fiss = FoodItemServingSizes.objects.create( food_item_id = fi,
@@ -408,6 +553,10 @@ for df in sorted( files, key=lambda x: x['import_order'] ):
 
         elif name == 'FoodItemNutrients':
             ndb_id = column_fields[0]
+
+            if ndb_id not in database['FoodItems']:
+                continue
+
             nutrient_id = column_fields[1]
             fi = database['FoodItems'][ndb_id]
 
@@ -479,6 +628,10 @@ for df in sorted( files, key=lambda x: x['import_order'] ):
 
         elif name == 'Footnotes':
             ndb_id = column_fields[0]
+
+            if ndb_id not in database['FoodItems']:
+                continue
+
             nutrient_id = column_fields[3]
 
             if ndb_id not in database['FoodItemNutrients']:
@@ -508,6 +661,10 @@ for df in sorted( files, key=lambda x: x['import_order'] ):
                                    
         elif name == 'NutrientCitationsLink':
             ndb_id = column_fields[0]
+
+            if ndb_id not in database['FoodItems']:
+                continue
+
             nutrient_id = column_fields[1]
             citation_id = column_fields[2]
 

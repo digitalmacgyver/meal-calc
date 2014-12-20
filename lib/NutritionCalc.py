@@ -141,6 +141,8 @@ def meal_planner( meal, food_items, filler_items=None, fitness_function=sum_less
         # Now add any filler items not already in the meal.
         for ingredient in filler_items:
             if ingredient.uid not in seen:
+                #import pdb
+                #pdb.set_trace()
                 fitness_food_items.append( ingredient )
                 seen[ingredient.uid] = True
 
@@ -149,6 +151,7 @@ def meal_planner( meal, food_items, filler_items=None, fitness_function=sum_less
         for nutrient, constraint_type, amount in meal.nutrient_constraints:
 
             if constraint_type == 'eq':
+                #print "EQUALITY CONSTRAINT: AMOUNT, NUTRIENT, FFI:", amount, nutrient, fitness_food_items, [ x.get_nutrients()[nutrient] for x in fitness_food_items ]
 
                 def make_closure( amount, nutrient, fitness_food_items ):
                     def equality_function( amounts ):
@@ -338,6 +341,9 @@ class Meal( object ):
             self.food_items[food_item_id] = amount
 
     def add_nutrient_constraint( self, nutrient, constraint_type, amount ):
+        #import pdb
+        #pdb.set_trace()
+
         if nutrient not in self.NUTs:
             raise Exception( "No such nutrient: %s, valid nutrients are: %s" % ( nutrient, self.NUTs.keys() ) )
 
@@ -574,20 +580,25 @@ class FoodItems( object ):
             FoodItems.food_items = {}
 
             # DEBUG - for the time being we just get the first food item.
+            #dbfis = db.FoodItems.objects.prefetch_related( 'fooditemservingsizes_set' ).all()
             dbfis = db.FoodItems.objects.all()
             #dbfis = db.FoodItems.objects.iterator()
             # DEBUG - let's see some SQL
             #print dbfis.query
             #dbfis = [ dbfis[0], dbfis[10] ]
-            #dbfis = dbfis[:50]
+            #dbfis = [dbfis]
 
             NUTs = Nutrients().get_nutrient_types()
             
             for dbfi in dbfis:
+                #import pdb
+                #pdb.set_trace()
+
                 name = dbfi.long_desc
                 uid = dbfi.uid
-                
-                dbss = db.FoodItemServingSizes.objects.filter( food_item_id__pk = dbfi.pk )
+
+                #dbss = db.FoodItemServingSizes.objects.filter( food_item_id__pk = dbfi.pk )
+                dbss = dbfi.fooditemservingsizes_set.all()
                 # DEBUG show me SQL
                 #print dbss.query
                 if len( dbss ):
@@ -595,10 +606,11 @@ class FoodItems( object ):
                 else:
                     serving_size = None
 
-                dbnuts = db.FoodItemNutrients.objects.filter( food_item_id__pk = dbfi.pk )
+                #dbnuts = db.FoodItemNutrients.objects.filter( food_item_id__pk = dbfi.pk )
+                dbnuts = dbfi.fooditemnutrients_set.all()
                 # DEBUG show me sql
                 #print dbnuts.query
-
+                
                 fi = FoodItem( name, serving_size=serving_size, uid=uid )
 
                 monounsaturated = 0
@@ -649,7 +661,7 @@ class FoodItems( object ):
             for nut in NUTs.keys():
                 cfill_nuts[nut] = 0.0
             cfill_nuts['Energy'] = 4.0
-            cfill_nuts['Carbyhydrate, by difference'] = 1.0
+            cfill_nuts['Carbohydrate, by difference'] = 1.0
             cfill = FoodItem( 'carbs filler',
                               nutrients = cfill_nuts )
             FoodItems.food_items[cfill.uid] = cfill

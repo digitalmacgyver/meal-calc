@@ -1,30 +1,18 @@
 TODO:
 
-IN PROGRESS: 4.5. Do some local performance testing.
-
 1. Change Nutrition_calc to either offer _by_id methods and standard
 ones that act on uids or objects, or change the function behaviors to
 be dynamic.
 
-1. Sample data for three classes:
+* Build out structure for age/gender DRI lookups.
 
-IN PROGRESS A. Max of 100% DRI.
-B. Max of 50% DRI.
-
-C. Optimization centered on 50% DRI, things get worse as you begin to
-exceed 50%.
-
-Form inputs: version 1:
-     * Total calories.
-     * Calculates ranges of macronutrients based on it.
-     * Doesn't do any age/gender stuff.
-     * Just prints out similar data to what is printed out on the screen.
+* Render visualizatoins of meal goodness along its nutrient lists.
 
 --
 
 Then, in no order:
-* Put food in groups
-* Recreate database with only food items of interest.
+PENDING PAUL - * Put food in groups
+PENDING PAUL - * Recreate database with only food items of interest.
 
 ---
 

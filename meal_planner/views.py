@@ -2,6 +2,7 @@ from django.core import serializers
 from django.shortcuts import render
 from django.http import HttpResponse
 
+import json
 import scipy.optimize
 
 from meal_planner.models import *
@@ -16,6 +17,32 @@ def index( request ):
 
     context = { 'food_items' : food_items }
     return render( request, 'meal_planner/index.html', context )
+
+def hw( request ):
+    return render( request, 'meal_planner/hw.html' )
+
+def get_script( request, name ):
+    # DEBUG
+    # Load up script from template directory, render it to .js, and send it out?
+    # Or instead have a static file for scripts?  Do I want to templatize scripts?
+    # Scripts should be static, and controlled by parameters which are dynamic.
+    pass
+
+def hwaj( request ):
+
+    #import pdb
+    #pdb.set_trace()
+    
+    name = request.REQUEST.get( 'name', 'world' )
+    if name == '':
+        name = 'world'
+
+    data = { 'response_data' : "Hello %s!" % ( name ) }
+
+    # DEBUG - when working with queryset elements use:
+    # from django.core import serializers
+    # serializers.serialize( 'json', foo )
+    return HttpResponse( json.dumps( data ), content_type='application/json' )
 
 def food_item( request, food_item_id ):
     food_item = FoodItems.objects.get( pk=food_item_id )
@@ -125,6 +152,8 @@ def planner( request ):
     pfill = None
     cfill = None
     ffill = None
+
+    current_score = 0
     
     for fi in food_items:
         if fi.name == 'protein filler':
@@ -263,10 +292,12 @@ def planner( request ):
             goal_amount = -1.0
             if nutrient in nutrient_goal_hash:
                 goal_amount = nutrient_goal_hash[nutrient]
-            current_meal_nutrients[nutrient] = "%0.02f%% of DRI - %f grams" % ( 100.0 * amount / goal_amount,  amount )
+                current_meal_nutrients[nutrient] = "%0.02f%% of DRI - %f grams" % ( 100.0 * amount / goal_amount,  amount )
+            # Don't show stuff if we don't have a goal.
     return render( request, 'meal_planner/planner.html', { 
         'form' : form, 
         'current_meal' : current_meal.get_food_items(),
-        'current_meal_nutrients' : current_meal_nutrients,
-        'food_group' : food_group
+        'current_meal_nutrients' : sorted( current_meal_nutrients.items(), key=lambda x: x[0] ),
+        'food_group' : food_group,
+        'current_score' : current_score
     } )
