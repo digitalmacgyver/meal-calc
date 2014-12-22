@@ -206,6 +206,11 @@ def planner( request ):
                                                                        ( 'Total lipid (fat)',     energy*.3*.8/9, energy*.3*1.2/9 ) ],
                                         nutrient_goals = nutrient_goals )
 
+                for nutrient, amount in nutrient_goals:
+                    if nutrient in [ 'Energy', 'Protein', 'Carbohydrate, bu difference', 'Total lipid (fat)' ]:
+                        continue
+                    initial_meal.add_nutrient_constraint( nutrient, 'limits', ( 0, amount*3 ) )
+
                 selected_foods = { form.data['food_choices'] : 'selected_foods_%s' % ( form.data['food_choices'] ) }
                 for food_item_label in [ x for x in form.data.keys() if x.startswith( 'selected_foods_' ) ]:
                     selected_foods[food_item_label[15:]] = form.data[food_item_label]
@@ -225,6 +230,10 @@ def planner( request ):
                                                                        ( 'Total lipid (fat)',     energy*.3*.8/9, energy*.3*1.2/9 ) ],
                                         nutrient_goals = nutrient_goals )
                 
+                for nutrient, amount in nutrient_goals:
+                    if nutrient in [ 'Energy', 'Protein', 'Carbohydrate, bu difference', 'Total lipid (fat)' ]:
+                        continue
+                    initial_meal.add_nutrient_constraint( nutrient, 'limits', ( 0, amount*3 ) )
 
 
                 # DEBUG - We're only getting one ingredient at a time.
