@@ -109,9 +109,6 @@ def meal_planner( meal, food_items, filler_items=None, fitness_function=sum_less
     if filler_items is None:
         filler_items = []
 
-    #import pdb
-    #pdb.set_trace()
-
     result_meals = []
 
     #for fi in food_items:
@@ -199,9 +196,19 @@ def meal_planner( meal, food_items, filler_items=None, fitness_function=sum_less
         for idx, ffi in enumerate( fitness_food_items ):
             fitness_food_items_map[ffi.uid] = idx
 
+        # Set default bounds which are 0->infinity, or min_servings->max_servings.
         for ffi in fitness_food_items:
-            bounds.append( ( 0, None ) )
+            lower = 0
+            upper = None
 
+            if ffi.serving_size:
+                if meal.min_servings:
+                    lower = float( ffi.serving_size ) * float( meal.min_servings )
+                    if meal.max_servings:
+                        upper = float( ffi.serving_size ) * float( meal.max_servings )
+            bounds.append( ( lower, upper ) )
+
+        # Override generic default bounds with specific user supplied bounds.
         for food_item_id, constraint_type, bounds in meal.food_item_constraints:
             bounds_idx = None
             if food_item_id in fitness_food_items_map:
@@ -300,9 +307,29 @@ class Meal( object ):
                   food_item_equality_constraints = [], # List of ( food_item_id, amount ) 
                   food_item_limit_constraints = [],    # List of ( food_item_id, lower, upper )
                   nutrient_goals = [],                 # List of ( nutrient_name, goal amount )
-                  food_item_goals = [] ):              # List of ( food_item_id, goal amount )
-        '''
-        '''
+                  food_item_goals = [],                # List of ( food_item_id, goal amount )
+                  min_servings = None,                 # If set,
+                                                       # specifies the
+                                                       # minumum
+                                                       # number of
+                                                       # servings of
+                                                       # any food item
+                                                       # permissible,
+                                                       # however is
+                                                       # overridden by
+                                                       # specific
+                                                       # food_item_limit_constraints
+                  max_servings = None ):               # If set
+                                                       # specifies the
+                                                       # maximum
+                                                       # number of
+                                                       # servings of
+                                                       # any food item
+                                                       # permissible,
+                                                       # however is
+                                                       # overridden by
+                                                       # specic
+                                                       # food_item_limit_constraints.
         
         self.name = name
         
@@ -333,6 +360,10 @@ class Meal( object ):
         self.food_item_goals = {}
         for food_item_id, amount in food_item_goals:
             self.add_food_item_goal( food_item_id, amount )
+        
+        self.min_servings = min_servings
+        self.max_servings = max_servings
+
 
     def add_food_item( self, food_item_id, amount ):
         #import pdb
@@ -341,9 +372,6 @@ class Meal( object ):
             self.food_items[food_item_id] = amount
 
     def add_nutrient_constraint( self, nutrient, constraint_type, amount ):
-        #import pdb
-        #pdb.set_trace()
-
         if nutrient not in self.NUTs:
             raise Exception( "No such nutrient: %s, valid nutrients are: %s" % ( nutrient, self.NUTs.keys() ) )
 
@@ -358,15 +386,16 @@ class Meal( object ):
                 self.nutrient_constraints.append( ( nutrient, 'lt', upper_bound ) )
 
     def add_food_item_constraint( self, food_item_id, constraint_type, amount ):
-        if self.FIs.get_food_item( food_item_id ):
-            if constraint_type == 'eq':
-                self.food_item_constraints.append( ( food_item_id, ( amount, amount ) ) )
-            elif constraint_type == 'limits':
-                if amount[0] is None:
-                    # DEBUG - do some logging here.
-                    print "WARNING: Setting the lower bound of a food item to None will allow a negative quantity of that food item!"
+        food_item = self.FIs.get_food_item( food_item_id )
 
-                self.food_item_constraints.append( ( food_item_id, amount ) )
+        if constraint_type == 'eq':
+            self.food_item_constraints.append( ( food_item_id, ( amount, amount ) ) )
+        elif constraint_type == 'limits':
+            if amount[0] is None:
+                # DEBUG - do some logging here.
+                print "WARNING: Setting the lower bound of a food item to None will allow a negative quantity of that food item!"
+
+            self.food_item_constraints.append( ( food_item_id, amount ) )
 
     def add_nutrient_goal( self, nutrient, amount ):
         if nutrient not in self.NUTs:

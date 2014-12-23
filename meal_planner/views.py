@@ -97,51 +97,56 @@ food_group_ordering = [ 'vegetables', 'proteins', 'carbs', 'fruits_and_nuts', 'f
 energy = 1359.42
 
 nutrient_goals = [
-    ('Calcium, Ca', .8),
-    ('Carbohydrate, by difference', 130),
-    ('Choline, total', .25),
-    ('Copper, Cu', .44 / 1000),
-    ('Energy', energy),
-    ('Fiber, total dietary', 19.03188),
-    ('Fluoride, F', 1000.0 / ( 1000*1000 )),
-    ('Folate, total', 200.0 / ( 1000*1000 )),
-    ('Histidine', .408),
-    ('Iron, Fe', 10.0 / 1000),
-    ('Isoleucine', .561),
-    ('Leucine', 1.2495),
-    ('Lutein + zeaxanthin', 6000.0 / ( 1000*1000 )),
-    ('Lysine', 1.173),
-    ('Magnesium, Mg', 130.0 / 1000),
-    ('Manganese, Mn', 1.5 / 1000),
-    ('Niacin', 8.0 / 1000),
-    ('Pantothenic acid', 3.0 / 1000),
-    ('Phosphorus, P', .5),
-    ('Potassium, K', 3.8),
-    ('Protein', 20.4),
-    ('Riboflavin', 0.6 / 1000),
-    ('Selenium, Se', 30.0 / ( 1000*1000 )),
-    ('Sodium, Na', 1.2),
-    ('Thiamin', 0.6 / 1000),
-    ('Threonine', .612),
-    ('Tryptophan', .153),
-    ('Valine', .714),
-    ('Vitamin A, RAE', 400.0 / ( 1000*1000 )),
-    ('Vitamin B-12', 1.2 / ( 1000*1000 )),
-    ('Vitamin B-6', 0.6 / 1000),
-    ('Vitamin C, total ascorbic acid', 25.0 / 1000),
-    ('Vitamin D (D2 + D3)', 5.0 / ( 1000*1000 )),
-    ('Vitamin E (alpha-tocopherol)', 7.0 / 1000),
-    ('Vitamin K (phylloquinone)', 55.0 / ( 1000*1000 )),
-    ('Water', 1700),
-    ('Zinc, Zn', 5.0 / 1000),
-    ('Fat - Unsaturated' , 10.9),
-    ('Methionine and Cystine' , 0.561),
-    ('Phenylalanine and Tyrosine' , 1.0455 )
+    ('Calcium, Ca', .8, 2.5 ),
+    ('Carbohydrate, by difference', 130, None ),
+    ('Choline, total', .25, None ),
+    ('Copper, Cu', .44 / 1000, 3.0 / 1000 ),
+    ('Energy', energy, None ),
+    ('Fiber, total dietary', 19.03188, None ),
+    ('Fluoride, F', 1000.0 / ( 1000*1000 ), None ),
+    ('Folate, total', 200.0 / ( 1000*1000 ), None ),
+    ('Histidine', .408, None ),
+    ('Iron, Fe', 10.0 / 1000, 40.0 / 1000 ),
+    ('Isoleucine', .561, None ),
+    ('Leucine', 1.2495, None ),
+    ('Lutein + zeaxanthin', 6000.0 / ( 1000*1000 ), None ),
+    ('Lysine', 1.173, None ),
+    ('Magnesium, Mg', 130.0 / 1000, None ),
+    ('Manganese, Mn', 1.5 / 1000, 3.0 / 1000 ),
+    ('Niacin', 8.0 / 1000, None ),
+    ('Pantothenic acid', 3.0 / 1000, None ),
+    ('Phosphorus, P', .5, 3.0 ),
+    ('Potassium, K', 3.8, None ),
+    ('Protein', 20.4, None ),
+    ('Riboflavin', 0.6 / 1000, None ),
+    ('Selenium, Se', 30.0 / ( 1000*1000 ), 150.0 / ( 1000*1000 ) ),
+    ('Sodium, Na', 1.2, 1.9 ),
+    ('Thiamin', 0.6 / 1000, None ),
+    ('Threonine', .612, None ),
+    ('Tryptophan', .153, None ),
+    ('Valine', .714, None ),
+    ('Vitamin A, RAE', 400.0 / ( 1000*1000 ), None ),
+    ('Vitamin B-12', 1.2 / ( 1000*1000 ), None ),
+    ('Vitamin B-6', 0.6 / 1000, None ),
+    ('Vitamin C, total ascorbic acid', 25.0 / 1000, None ),
+    ('Vitamin D (D2 + D3)', 5.0 / ( 1000*1000 ), None ),
+    ('Vitamin E (alpha-tocopherol)', 7.0 / 1000, None ),
+    ('Vitamin K (phylloquinone)', 55.0 / ( 1000*1000 ), None ),
+    ('Water', 1700, None ),
+    ('Zinc, Zn', 5.0 / 1000, 12.0 / 1000 ),
+    ('Fat - Unsaturated' , 10.9, None ),
+    ('Methionine and Cystine' , 0.561, None ),
+    ('Phenylalanine and Tyrosine' , 1.0455, None )
 ]
 
 nutrient_goal_hash = {}
 for goal in nutrient_goals:
     nutrient_goal_hash[goal[0]] = goal[1]
+
+nutrient_limit_hash = {}
+for goal in nutrient_goals:
+    if goal[2]:
+        nutrient_limit_hash[goal[0]] = goal[2]
 
 def planner( request ):
     current_meal = None
@@ -204,12 +209,12 @@ def planner( request ):
                                         nutrient_limit_constraints = [ ( 'Protein', energy*.3*.8/4, energy*.3*1.2/4 ),
                                                                        ( 'Carbohydrate, by difference',   energy*.4*.8/4, energy*.4*1.2/4 ),
                                                                        ( 'Total lipid (fat)',     energy*.3*.8/9, energy*.3*1.2/9 ) ],
-                                        nutrient_goals = nutrient_goals )
+                                        nutrient_goals = [ x[:2] for x in nutrient_goals ],
+                                        min_servings = 0.5,
+                                        max_servings = 3.0 )
 
-                for nutrient, amount in nutrient_goals:
-                    if nutrient in [ 'Energy', 'Protein', 'Carbohydrate, bu difference', 'Total lipid (fat)' ]:
-                        continue
-                    initial_meal.add_nutrient_constraint( nutrient, 'limits', ( 0, amount*3 ) )
+                for nutrient, amount in nutrient_limit_hash.items():
+                    initial_meal.add_nutrient_constraint( nutrient, 'limits', ( 0, amount ) )
 
                 selected_foods = { form.data['food_choices'] : 'selected_foods_%s' % ( form.data['food_choices'] ) }
                 for food_item_label in [ x for x in form.data.keys() if x.startswith( 'selected_foods_' ) ]:
@@ -228,13 +233,12 @@ def planner( request ):
                                         nutrient_limit_constraints = [ ( 'Protein', energy*.3*.8/4, energy*.3*1.2/4 ),
                                                                        ( 'Carbohydrate, by difference',   energy*.4*.8/4, energy*.4*1.2/4 ),
                                                                        ( 'Total lipid (fat)',     energy*.3*.8/9, energy*.3*1.2/9 ) ],
-                                        nutrient_goals = nutrient_goals )
+                                        nutrient_goals = [ x[:2] for x in nutrient_goals ],
+                                        min_servings = 0.5,
+                                        max_servings = 3.0 )
                 
-                for nutrient, amount in nutrient_goals:
-                    if nutrient in [ 'Energy', 'Protein', 'Carbohydrate, bu difference', 'Total lipid (fat)' ]:
-                        continue
-                    initial_meal.add_nutrient_constraint( nutrient, 'limits', ( 0, amount*3 ) )
-
+                for nutrient, amount in nutrient_limit_hash.items():
+                    initial_meal.add_nutrient_constraint( nutrient, 'limits', ( 0, amount ) )
 
                 # DEBUG - We're only getting one ingredient at a time.
                 selected_foods = { form.data['food_choices'] : 'selected_foods_%s' % ( form.data['food_choices'] ) }
@@ -274,7 +278,10 @@ def planner( request ):
                               nutrient_limit_constraints = [ ( 'Protein', energy*.3*.8/4, energy*.3*1.2/4 ),
                                                              ( 'Carbohydrate, by difference',   energy*.4*.8/4, energy*.4*1.2/4 ),
                                                              ( 'Total lipid (fat)',     energy*.3*.8/9, energy*.3*1.2/9 ) ],
-                              nutrient_goals = nutrient_goals )
+                              nutrient_goals = [ x[:2] for x in nutrient_goals ],
+                              min_servings = 0.5,
+                              max_servings = 3.0 )
+
         
         current_meal = empty_meal
 
@@ -301,7 +308,7 @@ def planner( request ):
             goal_amount = -1.0
             if nutrient in nutrient_goal_hash:
                 goal_amount = nutrient_goal_hash[nutrient]
-                current_meal_nutrients[nutrient] = "%0.02f%% of DRI - %f grams" % ( 100.0 * amount / goal_amount,  amount )
+                current_meal_nutrients[nutrient] = "%d%% of DRI - ~%d grams" % ( int( 100.0 * amount / goal_amount ),  int( amount ) )
             # Don't show stuff if we don't have a goal.
     return render( request, 'meal_planner/planner.html', { 
         'form' : form, 

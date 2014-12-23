@@ -21,7 +21,7 @@
   <table border="1px">
     {% for food_item, amount in current_meal  %}
     <tr>
-    <td>{{ food_item.name }}</td><td>{{amount}} grams</td>
+    <td>{{ food_item.name }}</td><td>{{amount|stringformat:"0.0f"}} grams</td>
     </tr>
     {% endfor %}
   </table>
